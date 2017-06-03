@@ -1,0 +1,1136 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="caffe,人脸识别," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="VGG Face Descriptor 是牛津大学VGG小组的工作，现在已经开源训练好的网络结构和模型参数，本文将基于此模型在caffe上使用自己的人脸数据微调，并进行特征提取与精确度验证。数据传送门：CASIA WebFace模型传送门：http://www.robots.ox.ac.uk/~vgg/software/vgg_face/">
+<meta name="keywords" content="caffe,人脸识别">
+<meta property="og:type" content="article">
+<meta property="og:title" content="基于VGG-Face的人脸识别测试">
+<meta property="og:url" content="http://yoursite.com/2017/03/03/VGG-Face/index.html">
+<meta property="og:site_name" content="My Blogs">
+<meta property="og:description" content="VGG Face Descriptor 是牛津大学VGG小组的工作，现在已经开源训练好的网络结构和模型参数，本文将基于此模型在caffe上使用自己的人脸数据微调，并进行特征提取与精确度验证。数据传送门：CASIA WebFace模型传送门：http://www.robots.ox.ac.uk/~vgg/software/vgg_face/">
+<meta property="og:updated_time" content="2017-03-09T02:56:36.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="基于VGG-Face的人脸识别测试">
+<meta name="twitter:description" content="VGG Face Descriptor 是牛津大学VGG小组的工作，现在已经开源训练好的网络结构和模型参数，本文将基于此模型在caffe上使用自己的人脸数据微调，并进行特征提取与精确度验证。数据传送门：CASIA WebFace模型传送门：http://www.robots.ox.ac.uk/~vgg/software/vgg_face/">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2017/03/03/VGG-Face/"/>
+
+
+
+
+
+  <title>基于VGG-Face的人脸识别测试 | My Blogs</title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">My Blogs</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">this is a subtitile</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-heartbeat"></i> <br />
+            
+            公益404
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/03/03/VGG-Face/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="wujiyang">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="http://i1.piimg.com/567571/8edc35a4e7c8921c.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="My Blogs">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">基于VGG-Face的人脸识别测试</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-03-03T08:46:47+08:00">
+                2017-03-03
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/caffe/" itemprop="url" rel="index">
+                    <span itemprop="name">caffe</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>VGG Face Descriptor 是牛津大学VGG小组的工作，现在已经开源训练好的网络结构和模型参数，本文将基于此模型在caffe上使用自己的人脸数据微调，并进行特征提取与精确度验证。<br>数据传送门：<a href="http://www.cbsr.ia.ac.cn/english/CASIA-WebFace-Database.html" target="_blank" rel="external">CASIA WebFace</a><br>模型传送门：<a href="http://www.robots.ox.ac.uk/~vgg/software/vgg_face/" target="_blank" rel="external">http://www.robots.ox.ac.uk/~vgg/software/vgg_face/</a><br><a id="more"></a>  </p>
+<h4 id="模型准备"><a href="#模型准备" class="headerlink" title="模型准备"></a>模型准备</h4><p>1.从上面的网址中下载VGG-Face已经训练好的模型和网络结构文件，根据deploy.proto文件来修改得到train_val.prototxt文件，主要有：修改数据层的输入和最后全连接层以及损失层等，注意fc8层名称的修改，具体如下：  </p>
+<pre><code class="python">name: <span class="string">"VGG_FACE_16_layers"</span>
+layer {
+  name: <span class="string">"data"</span>
+  type: <span class="string">"Data"</span>
+  top: <span class="string">"data"</span>
+  top: <span class="string">"label"</span>
+  include {
+    phase: TRAIN
+  }
+  transform_param {
+    mirror: true
+    crop_size: <span class="number">224</span>
+<span class="comment">#    mean_file: "data/ilsvrc12/imagenet_mean.binaryproto"</span>
+  }
+  data_param {
+    source: <span class="string">"vggface/webface_train_lmdb"</span>
+    batch_size: <span class="number">32</span>
+    backend: LMDB
+  }
+}
+layer {
+  name: <span class="string">"data"</span>
+  type: <span class="string">"Data"</span>
+  top: <span class="string">"data"</span>
+  top: <span class="string">"label"</span>
+  include {
+    phase: TEST
+  }
+  transform_param {
+    mirror: false
+    crop_size: <span class="number">224</span>
+<span class="comment">#    mean_file: "data/ilsvrc12/imagenet_mean.binaryproto"</span>
+  }
+  data_param {
+    source: <span class="string">"vggface/webface_val_lmdb"</span>
+    batch_size: <span class="number">32</span>
+    backend: LMDB
+  }
+}  
+......
+layer {
+  bottom: <span class="string">"fc7"</span>
+  top: <span class="string">"fc8_s"</span>
+  name: <span class="string">"fc8_s"</span>
+  type: <span class="string">"InnerProduct"</span>
+  param {
+    lr_mult: <span class="number">10</span>
+    decay_mult: <span class="number">1</span>
+  }
+  param {
+    lr_mult: <span class="number">20</span>
+    decay_mult: <span class="number">0</span>
+  }
+  inner_product_param {
+    num_output: <span class="number">2031</span>
+    weight_filler {  
+      type: <span class="string">"gaussian"</span>
+      std: <span class="number">0.01</span>  
+    }  
+    bias_filler {  
+      type: <span class="string">"constant"</span>  
+      value: <span class="number">0.1</span>
+    }  
+  }
+}
+layer {
+  name: <span class="string">"accuracy"</span>
+  type: <span class="string">"Accuracy"</span>
+  bottom: <span class="string">"fc8_s"</span>
+  bottom: <span class="string">"label"</span>
+  top: <span class="string">"accuracy"</span>
+  include {
+    phase: TEST
+  }
+}
+layer {
+  name: <span class="string">"loss"</span>
+  type: <span class="string">"SoftmaxWithLoss"</span>
+  bottom: <span class="string">"fc8_s"</span>
+  bottom: <span class="string">"label"</span>
+  top: <span class="string">"loss"</span>
+}
+</code></pre>
+<h4 id="模型训练"><a href="#模型训练" class="headerlink" title="模型训练"></a>模型训练</h4><p>本次训练，我采用的是webface中人脸数量在50张以上的个人类别，总共有两千多个。按照caffe的工具转换成lmdb格式即可开始训练。   </p>
+<h4 id="模型效果测试"><a href="#模型效果测试" class="headerlink" title="模型效果测试"></a>模型效果测试</h4><p>模型训练结束之后，在lfw上验证实验效果。lfw数据对使用官方提供的txt文件，不过我觉得格式不太好，就自己用脚本进行了些许修改：<br>pairs.txt  </p>
+<pre><code class="python">Abel_Pacheco    <span class="number">1</span>    <span class="number">4</span>
+Akhmed_Zakayev    <span class="number">1</span>    <span class="number">3</span>
+Akhmed_Zakayev    <span class="number">2</span>    <span class="number">3</span>
+Amber_Tamblyn    <span class="number">1</span>    <span class="number">2</span>
+Anders_Fogh_Rasmussen    <span class="number">1</span>    <span class="number">3</span>
+Anders_Fogh_Rasmussen    <span class="number">1</span>    <span class="number">4</span>
+</code></pre>
+<p>修改后，将一对图片的路径放在一起，属于同一个人为1，否则为0  </p>
+<pre><code class="python">Abel_Pacheco/Abel_Pacheco_0001.jpg  Abel_Pacheco/Abel_Pacheco_0004.jpg    <span class="number">1</span>
+Akhmed_Zakayev/Akhmed_Zakayev_0001.jpg    Akhmed_Zakayev/Akhmed_Zakayev_0003.jpg    <span class="number">1</span>
+Akhmed_Zakayev/Akhmed_Zakayev_0002.jpg    Akhmed_Zakayev/Akhmed_Zakayev_0003.jpg    <span class="number">1</span>
+Amber_Tamblyn/Amber_Tamblyn_0001.jpg    Amber_Tamblyn/Amber_Tamblyn_0002.jpg    <span class="number">1</span>
+</code></pre>
+<p>脚本如下：   </p>
+<pre><code class="python"><span class="comment">#!/usr/bin/python  </span>
+<span class="comment">#-*- coding: utf-8 -*-  </span>
+
+<span class="comment">#Created on Thur Mar 2 10:17:38 2017</span>
+<span class="comment">#Goal:parse pairs.txt of LFW database to label.txt for face #recognition test</span>
+<span class="comment">#@author: wujiyang</span>
+
+<span class="keyword">import</span> sys
+
+<span class="function"><span class="keyword">def</span> <span class="title">get_all_images</span><span class="params">(filename)</span>:</span>
+    file = open(filename)
+    lines = file.readlines()
+    list = []
+    <span class="keyword">for</span> line <span class="keyword">in</span> lines:
+        line_split = line.strip(<span class="string">'\n'</span>).split(<span class="string">'\t'</span>)
+        <span class="keyword">if</span>(len(line_split)) == <span class="number">3</span>:
+               line_split[<span class="number">-1</span>] = line_split[<span class="number">-1</span>].zfill(<span class="number">4</span>)
+               line_split[<span class="number">-2</span>] = line_split[<span class="number">-2</span>].zfill(<span class="number">4</span>)
+        <span class="keyword">if</span>(len(line_split)) == <span class="number">4</span>:
+               line_split[<span class="number">-1</span>] = line_split[<span class="number">-1</span>].zfill(<span class="number">4</span>)
+               line_split[<span class="number">-3</span>] = line_split[<span class="number">-3</span>].zfill(<span class="number">4</span>)
+        list.append(line_split)
+    file.close()
+    <span class="keyword">return</span> list
+
+<span class="function"><span class="keyword">def</span> <span class="title">save2labelfile</span><span class="params">(list)</span>:</span>
+    file = open(<span class="string">'label.txt'</span>, <span class="string">'w'</span>)
+    labellines = []
+    <span class="keyword">for</span> i <span class="keyword">in</span> range(len(list)):
+        <span class="keyword">if</span> len(list[i]) == <span class="number">3</span>:
+            labelline = list[i][<span class="number">0</span>] + <span class="string">'/'</span> + list[i][<span class="number">0</span>] + <span class="string">'_'</span> + list[i][<span class="number">1</span>] + <span class="string">'.jpg'</span> + <span class="string">'\t'</span> + <span class="string">'original'</span> + <span class="string">'/'</span> + list[i][<span class="number">0</span>] + <span class="string">'/'</span> + list[i][<span class="number">0</span>] + <span class="string">'_'</span> +list[i][<span class="number">2</span>] + <span class="string">'.jpg'</span> + <span class="string">'\t'</span> + <span class="string">'1\n'</span>
+            labellines.append(labelline)
+        <span class="keyword">elif</span> len(list[i]) == <span class="number">4</span>:
+            labelline = list[i][<span class="number">0</span>] + <span class="string">'/'</span> + list[i][<span class="number">0</span>] + <span class="string">'_'</span> + list[i][<span class="number">1</span>] + <span class="string">'.jpg'</span> + <span class="string">'\t'</span> + <span class="string">'original'</span> + <span class="string">'/'</span> + list[i][<span class="number">2</span>] + <span class="string">'/'</span> + list[i][<span class="number">2</span>] + <span class="string">'_'</span> + list[i][<span class="number">3</span>] + <span class="string">'.jpg'</span> + <span class="string">'\t'</span> + <span class="string">'0\n'</span>
+            labellines.append(labelline)
+    file.writelines(labellines)
+    file.close()
+
+
+<span class="string">'''''
+使用方法：执行脚本  python pair2label.py pairs.txt
+'''</span>
+<span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:
+    <span class="keyword">if</span> len(sys.argv) != <span class="number">2</span>:
+        <span class="keyword">print</span> <span class="string">"Format Error! Usuage: python %s pairs.txt"</span> %(sys.argv[<span class="number">0</span>])
+        sys.exit()
+    list = get_all_images(<span class="string">"pairs.txt"</span>)
+    save2labelfile(list)
+    <span class="keyword">print</span> <span class="string">"Done!"</span>
+</code></pre>
+<h4 id="特征提取与验证"><a href="#特征提取与验证" class="headerlink" title="特征提取与验证"></a>特征提取与验证</h4><p>此脚本采用caffe的python接口进行特征提取与验证。</p>
+<pre><code class="python"><span class="comment"># -*- coding: utf-8 -*-</span>
+<span class="string">"""
+Created on Mon Apr 20 16:55:55 2015
+
+@author: wujiyang
+@brief：在lfw数据库上验证训练好了的网络
+"""</span>
+<span class="keyword">import</span> math
+<span class="keyword">import</span> sklearn
+<span class="keyword">import</span> numpy <span class="keyword">as</span> np
+<span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt
+<span class="keyword">import</span> skimage
+caffe_root = <span class="string">'/home/wujiyang/caffe/'</span>  
+<span class="keyword">import</span> sys
+sys.path.insert(<span class="number">0</span>, caffe_root + <span class="string">'python'</span>)
+<span class="keyword">import</span> caffe
+
+<span class="keyword">import</span> sklearn.metrics.pairwise <span class="keyword">as</span> pw
+
+
+<span class="comment">#模型初始化相关操作</span>
+<span class="function"><span class="keyword">def</span> <span class="title">initilize</span><span class="params">()</span>:</span>
+    <span class="keyword">print</span> <span class="string">'model initilizing...'</span>
+    deployPrototxt = <span class="string">"./vgg-face-deploy.prototxt"</span>
+    modelFile = <span class="string">"./vgg-face.caffemodel"</span>
+    caffe.set_mode_gpu()
+    caffe.set_device(<span class="number">0</span>)
+    net = caffe.Net(deployPrototxt, modelFile,caffe.TEST)
+    <span class="keyword">return</span> net
+
+<span class="function"><span class="keyword">def</span> <span class="title">read_imagelist</span><span class="params">(labelfile)</span>:</span>
+    <span class="string">'''
+    @brief：从列表文件中，读取图像数据到矩阵文件中
+    @param： labelfile 图像列表文件
+    @return ：4D 的矩阵
+    '''</span>
+    file = open(labelfile)
+    lines = file.readlines()
+    test_num=len(lines)
+    file.close()
+    x = np.empty((test_num,<span class="number">3</span>,<span class="number">224</span>,<span class="number">224</span>))
+    y = np.empty((test_num,<span class="number">3</span>,<span class="number">224</span>,<span class="number">224</span>))
+    labels = []
+    i = <span class="number">0</span>
+    <span class="keyword">for</span> line <span class="keyword">in</span> lines:
+        path = line.strip(<span class="string">'\n'</span>).split(<span class="string">'\t'</span>)
+        <span class="comment">#read left image</span>
+        filename = path[<span class="number">0</span>]
+        img = skimage.io.imread(filename,as_grey=<span class="keyword">False</span>)
+        image = skimage.transform.resize(img,(<span class="number">224</span>,<span class="number">224</span>))*<span class="number">255</span>
+        <span class="keyword">if</span> image.ndim &lt; <span class="number">3</span>:
+            <span class="keyword">print</span> <span class="string">'gray:'</span>+filename
+            x[i,<span class="number">0</span>,:,:]=image[:,:]
+            x[i,<span class="number">1</span>,:,:]=image[:,:]
+            x[i,<span class="number">2</span>,:,:]=image[:,:]
+        <span class="keyword">else</span>:
+            x[i,<span class="number">0</span>,:,:]=image[:,:,<span class="number">0</span>]
+            x[i,<span class="number">1</span>,:,:]=image[:,:,<span class="number">1</span>]
+            x[i,<span class="number">2</span>,:,:]=image[:,:,<span class="number">2</span>]
+        <span class="comment">#read right image</span>
+        filename = path[<span class="number">1</span>]
+        img = skimage.io.imread(filename,as_grey=<span class="keyword">False</span>)
+        image = skimage.transform.resize(img,(<span class="number">224</span>,<span class="number">224</span>))*<span class="number">255</span>
+        <span class="keyword">if</span> image.ndim &lt; <span class="number">3</span>:
+            <span class="keyword">print</span> <span class="string">'gray:'</span>+filename
+            y[i,<span class="number">0</span>,:,:]=image[:,:]
+            y[i,<span class="number">1</span>,:,:]=image[:,:]
+            y[i,<span class="number">2</span>,:,:]=image[:,:]
+        <span class="keyword">else</span>:
+            y[i,<span class="number">0</span>,:,:]=image[:,:,<span class="number">0</span>]
+            y[i,<span class="number">1</span>,:,:]=image[:,:,<span class="number">1</span>]
+            y[i,<span class="number">2</span>,:,:]=image[:,:,<span class="number">2</span>]
+        <span class="comment">#read label</span>
+        labels.append(int(path[<span class="number">2</span>]))
+
+        i=i+<span class="number">1</span>
+    <span class="keyword">return</span> x, y, labels
+
+<span class="function"><span class="keyword">def</span> <span class="title">extractFeature</span><span class="params">(leftdata,rightdata)</span>:</span>
+    <span class="comment">#提取左半部分的特征</span>
+    test_num=np.shape(leftdata)[<span class="number">0</span>]
+    <span class="comment">#data 是输入层的名字</span>
+    out = net.forward_all(data = leftdata)                                                                    
+    feature1 = np.float64(out[<span class="string">'fc7'</span>])
+    featureleft=np.reshape(feature1,(test_num,<span class="number">4096</span>))
+    <span class="comment">#np.savetxt('feature1.txt', feature1, delimiter=',')</span>
+
+    <span class="comment">#提取右半部分的特征</span>
+    out = net.forward_all(data = rightdata)                                                                                   
+    feature2 = np.float64(out[<span class="string">'fc7'</span>])
+    featureright=np.reshape(feature2,(test_num,<span class="number">4096</span>))
+    <span class="comment">#np.savetxt('feature2.txt', feature2, delimiter=',')</span>
+
+    <span class="keyword">return</span> featureleft, featureright
+
+<span class="function"><span class="keyword">def</span> <span class="title">calculate_accuracy</span><span class="params">(distance,labels,num)</span>:</span>    
+    <span class="string">'''
+    #计算识别率,
+    选取阈值，计算识别率
+    '''</span>    
+    accuracy = {}
+    predict = np.empty((num,))
+    threshold = <span class="number">0.1</span>
+    <span class="keyword">while</span> threshold &lt;= <span class="number">0.9</span> :
+        <span class="keyword">for</span> i <span class="keyword">in</span> range(num):
+            <span class="keyword">if</span> distance[i] &gt;= threshold:
+                 predict[i] = <span class="number">0</span>
+            <span class="keyword">else</span>:
+                 predict[i] = <span class="number">1</span>
+        predict_right = <span class="number">0.0</span>
+        <span class="keyword">for</span> i <span class="keyword">in</span> range(num):
+            <span class="keyword">if</span> predict[i] == labels[i]:
+               predict_right += <span class="number">1.0</span>
+        current_accuracy = (predict_right / num)
+        accuracy[str(threshold)] = current_accuracy
+        threshold = threshold + <span class="number">0.001</span>
+    <span class="comment">#将字典按照value排序</span>
+    temp = sorted(accuracy.items(), key = <span class="keyword">lambda</span> d:d[<span class="number">1</span>], reverse = <span class="keyword">True</span>)
+    highestAccuracy = temp[<span class="number">0</span>][<span class="number">1</span>]
+    thres = temp[<span class="number">0</span>][<span class="number">0</span>]
+    <span class="keyword">return</span> highestAccuracy, thres
+
+
+
+<span class="keyword">if</span> __name__==<span class="string">'__main__'</span>:
+    <span class="comment">#模型初始化</span>
+    net = initilize()
+    <span class="keyword">print</span> <span class="string">'network input :'</span> ,net.inputs  
+    <span class="keyword">print</span> <span class="string">'network output： '</span>, net.outputs
+    <span class="comment">#读取图像数据</span>
+    leftdata,rightdata,labels = read_imagelist(<span class="string">'tmp.txt'</span>)
+    <span class="comment">#计算特征</span>
+    featureleft, featureright = extractFeature(leftdata, rightdata)
+
+    <span class="comment">#计算每个特征之间的距离 cosine距离</span>
+    test_num = len(labels)
+    mt = pw.pairwise_distances(featureleft, featureright, metric=<span class="string">'cosine'</span>)
+    distance = np.empty((test_num,))
+    <span class="keyword">for</span> i <span class="keyword">in</span> range(test_num):
+          distance[i] = mt[i][i]
+    <span class="keyword">print</span> <span class="string">'Distance before normalization:\n'</span>, distance
+    <span class="keyword">print</span> <span class="string">'Distance max:'</span>, np.max(distance), <span class="string">' Distance min:'</span>, np.min(distance), <span class="string">'\n'</span>
+    <span class="comment"># 距离需要归一化到0--1,与标签0-1匹配</span>
+    distance_norm = np.empty((test_num,))
+    <span class="keyword">for</span> i <span class="keyword">in</span> range(test_num):
+            distance_norm[i] = (distance[i]-np.min(distance))/(np.max(distance)-np.min(distance))
+    <span class="keyword">print</span> <span class="string">'Distance after normalization:\n'</span>, distance_norm
+    <span class="keyword">print</span> <span class="string">'Distance_norm max:'</span>, np.max(distance_norm), <span class="string">' Distance_norm min:'</span>, np.min(distance_norm), <span class="string">'\n'</span>
+
+    <span class="comment">#根据label和distance_norm计算精确度</span>
+    highestAccuracy, threshold = calculate_accuracy(distance_norm,labels,len(labels))
+    <span class="keyword">print</span> (<span class="string">"the highest accuracy is : %.4f, and the corresponding threshold is %s \n"</span>%(highestAccuracy, threshold))
+</code></pre>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>坚持原创技术分享，您的支持将鼓励我继续创作！</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="http://p1.bqimg.com/567571/f8e6470c52f39920.jpg" alt="wujiyang WeChat Pay"/>
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="http://p1.bpimg.com/567571/0dde3e062ded6e2f.jpg" alt="wujiyang Alipay"/>
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/caffe/" rel="tag"># caffe</a>
+          
+            <a href="/tags/人脸识别/" rel="tag"># 人脸识别</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/02/27/技巧性笔试题目总结/" rel="next" title="技巧性笔试题目总结">
+                <i class="fa fa-chevron-left"></i> 技巧性笔试题目总结
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="http://i1.piimg.com/567571/8edc35a4e7c8921c.jpg"
+               alt="wujiyang" />
+          <p class="site-author-name" itemprop="name">wujiyang</p>
+           
+              <p class="site-description motion-element" itemprop="description">我是网站描述，这里可以随便修改</p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">4</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">3</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">6</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/wujiyang" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="http://weibo.com" target="_blank" title="WeiBo">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  WeiBo
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="http://www.zhihu.com/people/wujiyang" target="_blank" title="ZhiHu">
+                  
+                    <i class="fa fa-fw fa-zhihu"></i>
+                  
+                  ZhiHu
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.baidu.com/" title="baidu" target="_blank">baidu</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#模型准备"><span class="nav-number">1.</span> <span class="nav-text">模型准备</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#模型训练"><span class="nav-number">2.</span> <span class="nav-text">模型训练</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#模型效果测试"><span class="nav-number">3.</span> <span class="nav-text">模型效果测试</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#特征提取与验证"><span class="nav-number">4.</span> <span class="nav-text">特征提取与验证</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wujiyang</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+  
+  <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.1"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
