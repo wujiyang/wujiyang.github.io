@@ -9,6 +9,7 @@
       </categories>
       <tags>
         <tag>随笔</tag>
+        <tag>影视剧</tag>
       </tags>
   </entry>
   <entry>
@@ -20,6 +21,7 @@
       </categories>
       <tags>
         <tag>随笔</tag>
+        <tag>小说</tag>
       </tags>
   </entry>
   <entry>
@@ -32,6 +34,7 @@
       <tags>
         <tag>caffe</tag>
         <tag>人脸识别</tag>
+        <tag>VGG-Face</tag>
       </tags>
   </entry>
   <entry>
@@ -57,6 +60,7 @@
       <tags>
         <tag>caffe</tag>
         <tag>技术</tag>
+        <tag>深度学习</tag>
       </tags>
   </entry>
   <entry>
@@ -68,6 +72,7 @@
       </categories>
       <tags>
         <tag>随笔</tag>
+        <tag>诗词</tag>
       </tags>
   </entry>
 </search>
