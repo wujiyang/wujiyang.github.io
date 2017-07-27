@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title><![CDATA[设计模式之一：单例模式]]></title>
+    <url>%2F2017%2F07%2F26%2F%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E4%B9%8B%E4%B8%80%EF%BC%9A%E5%8D%95%E4%BE%8B%E6%A8%A1%E5%BC%8F%2F</url>
+    <content type="text"><![CDATA[单例模式介绍&emsp;&emsp;单例模式，是一种常用的软件设计模式。在它的核心结构中只包含一个被称为单例的特殊类。通过单例模式可以保证系统中一个类只有一个实例。即一个类只有一个对象实例。 简单实现&emsp;&emsp;定义一个单例类，使用类的私有指针变量指向类的唯一实例，并且使用一个共有的静态方法获取该实例。&emsp;&emsp;懒汉模式：即第一次调用该类的实例的时候才产生一个新的该类实例，并在以后仅返回此实例。头文件singletonpattern.h #ifndef SINGLETONPATTERN_H #define SINGLETONPATTERN_H class SingletonPattern { private: SingletonPattern(); //私有构造函数 public: ~SingletonPattern(); static SingletonPattern* instance(); private: static SingletonPattern* instance; }; #endif // SINGLETONPATTERN_H 源文件singletonpattern.cpp #include "singletonpattern.h" SingletonPattern* SingletonPattern::_mission_manager = nullptr; //懒汉模式 SingletonPattern::SingletonPattern() { } SingletonPattern::~SingletonPattern() { } SingletonPattern* SingletonPattern::instance() { if(!instance) { instance = new SingletonPattern(); } return instance; } 饿汉模式： 无论是否调用该类的实例，在程序一开始就产生一个实例，并在以后仅返回此实例。 SingletonPattern* SingletonPattern::_mission_manager = new SingletonPattern(); //饿汉模式 线程安全的单例模式&emsp;&emsp;上面介绍的简单实现方式没有考虑到多线程的安全问题。使用double-check来保证线程安全 thread safety，但是如果处理大量数据的时候，该锁成为严重的性能瓶颈。 SingletonPattern* SingletonPattern::instance() { if(!instance) { lock(); if(!instance) { instance = new SingletonPattern(); } unlock(); } return instance; } 双重锁的目的是减小锁的粒度，只锁住new语句。]]></content>
+      <categories>
+        <category>设计模式</category>
+      </categories>
+      <tags>
+        <tag>技术</tag>
+        <tag>单例模式</tag>
+        <tag>设计模式</tag>
+      </tags>
+  </entry>
+  <entry>
     <title><![CDATA[《正阳门下》]]></title>
     <url>%2F2017%2F07%2F23%2F%E5%90%91%E9%98%B3%E9%97%A8%E4%B8%8B%2F</url>
     <content type="text"><![CDATA[茶飘香 酒罢去 聚朋友 再回楼 &emsp;&emsp;好剧推荐。 &emsp;&emsp;目前为止，看到的为数不多的几部反映上世纪70，80，90年代民风民俗的影视作品，一个是《平凡的世界》，一个就是现在看到的《正阳门下》。 &emsp;&emsp;还记得本科，室友马老板看这种类型的电视剧的时候，我觉得他逼格好高，对此甚至有点不屑一顾。但现在回过头来看看，自己是有点傻逼了，果然还是没有他的境界高，看来我比他的成长慢了两三年呢！ &emsp;&emsp;初看这部剧的时候，是被韩春明和苏萌的couple line所吸引。但后面越看越纠结，越看越难受，这部剧展现的北京四合院风情很好的诠释了这4个字： 人生百态&emsp;&emsp;男女主之间的纠葛爱情&emsp;&emsp;真兄弟之间的掏心掏肺&emsp;&emsp;恶小人之间的勾心斗角&emsp;&emsp;老北京人间的文化传承 &emsp;&emsp;看剧的时候感触颇深，但真的动起笔来时，发现只剩下这寥寥数语。算了，就写到这里吧，具体的那份情谊还需要自己去理解，去感受，去学习，去醒悟。。。 众里寻他千百度蓦然回首那人却在灯火阑珊处]]></content>
