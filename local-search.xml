@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  
+  
+  
+  <entry>
+    <title>kafka高性能分析</title>
+    <link href="/2024/02/17/kafka%E9%AB%98%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90/"/>
+    <url>/2024/02/17/kafka%E9%AB%98%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90/</url>
+    
+    <content type="html"><![CDATA[]]></content>
+    
+    
+    <categories>
+      
+      <category>Kafka</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>Kafka</tag>
+      
+      <tag>高可用</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
+    <title>kafka高可用分析</title>
+    <link href="/2024/02/17/kafka%E9%AB%98%E5%8F%AF%E7%94%A8%E5%88%86%E6%9E%90/"/>
+    <url>/2024/02/17/kafka%E9%AB%98%E5%8F%AF%E7%94%A8%E5%88%86%E6%9E%90/</url>
+    
+    <content type="html"><![CDATA[]]></content>
+    
+    
+    <categories>
+      
+      <category>Kafka</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>Kafka</tag>
+      
+      <tag>高可用</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
+    <title>Golang限流器</title>
+    <link href="/2024/01/07/Golang%E9%99%90%E6%B5%81/"/>
+    <url>/2024/01/07/Golang%E9%99%90%E6%B5%81/</url>
+    
+    <content type="html"><![CDATA[<p>在高并发业务场景下，保护系统时，常用的”三板斧”有：”熔断、降级和限流”。本文主要记录golang中常用的限流算法的实现方式。这里所说的限流并非是网关层面或者服务调度之间的限流，而是业务代码中的逻辑限流。</p><span id="more"></span>   <p>限流算法常用的几种实现方式有如下四种：</p><ul><li>计数器</li><li>滑动窗口</li><li>漏桶</li><li>令牌桶</li></ul><h2 id="1-计数器"><a href="#1-计数器" class="headerlink" title="1. 计数器"></a>1. 计数器</h2><h3 id="1-1-原理"><a href="#1-1-原理" class="headerlink" title="1.1 原理"></a>1.1 原理</h3><p>计数器是一种最简单限流算法，其原理就是：<strong>在一段时间间隔内，对请求进行计数，与阀值进行比较判断是否需要限流，一旦到了时间临界点，将计数器清零。</strong></p><ul><li>可以在程序中设置一个变量 count，当过来一个请求我就将这个数 +1，同时记录请求时间。</li><li>当下一个请求来的时候判断 count 的计数值是否超过设定的频次，以及当前请求的时间和第一次请求时间是否在 1 分钟内。</li><li>如果在 1 分钟内并且超过设定的频次则证明请求过多，后面的请求就拒绝掉。</li><li>如果该请求与第一个请求的间隔时间大于计数周期，且 count 值还在限流范围内，就重置 count。</li></ul><p><img src="/img/Golang%E9%99%90%E6%B5%81/1.png"> </p><h3 id="1-2-缺点"><a href="#1-2-缺点" class="headerlink" title="1.2 缺点"></a>1.2 缺点</h3><p>计数器算法存在“时间临界点”缺陷。比如每一分钟限制200个请求，可以在00:00:00-00:00:58秒里面都没有请求，在00:00:59瞬间发送200个请求，这个对于计数器算法来是允许的，然后在00:01:00再次发送200个请求，意味着在短短1s内发送了400个请求，如果量更大呢，系统可能会承受不住瞬间流量，导致系统崩溃。<br><img src="/img/Golang%E9%99%90%E6%B5%81/2.png"></p><h2 id="2-滑动窗口"><a href="#2-滑动窗口" class="headerlink" title="2. 滑动窗口"></a>2. 滑动窗口</h2><h3 id="2-1-原理"><a href="#2-1-原理" class="headerlink" title="2.1 原理"></a>2.1 原理</h3><p>滑动窗口算法将一个大的时间窗口分成多个小窗口，每次大窗口向后滑动一个小窗口，并保证大的窗口内流量不会超出最大值，这种实现比固定窗口的流量曲线更加平滑。</p><p>普通时间窗口有一个问题，比如窗口期内请求的上限是200，假设有200个请求集中在前1s的后100ms，200个请求集中在后1s的前100ms，其实在这200ms内就已经请求超限了，但是由于时间窗每经过1s就会重置计数，就无法识别到这种请求超限。</p><p><img src="/img/Golang%E9%99%90%E6%B5%81/3.png"><br>对于滑动时间窗口，我们可以把1ms的时间窗口划分成一些小窗口，上图中我们用红色的虚线代表一个时间窗口（一分钟），每个时间窗口有 6 个格子，每个格子是 10 秒钟。每过 10 秒钟时间窗口向右移动一格，可以看红色箭头的方向。我们为每个格子都设置一个独立的计数器 Counter，假如一个请求在 0:45 访问了那么我们将第五个格子的计数器 +1（也是就是 0:40~0:50），在判断限流的时候需要把所有格子的计数加起来和设定的频次进行比较即可。   </p><p>当用户在0:59 秒钟发送了 200 个请求就会被第六个格子的计数器记录 +200，当下一秒的时候时间窗口向右移动了一个，此时计数器已经记录了该用户发送的 200 个请求，所以再发送的话就会触发限流，则拒绝新的请求。 </p><h3 id="2-2-缺点"><a href="#2-2-缺点" class="headerlink" title="2.2 缺点"></a>2.2 缺点</h3><p>滑动窗口算法是计数器算法的一种改进[计数器就是只有一个格子的滑动窗口]，但从根本上并没有真正解决固定窗口算法的临界突发流量问题。想让限流做的更精确只能划分更多的格子。</p><h2 id="3-漏桶算法"><a href="#3-漏桶算法" class="headerlink" title="3. 漏桶算法"></a>3. 漏桶算法</h2><h3 id="3-1-原理"><a href="#3-1-原理" class="headerlink" title="3.1 原理"></a>3.1 原理</h3><p>漏桶算法是首先想象有一个木桶，桶的容量是固定的。当有请求到来时先放到木桶中，处理请求的worker以固定的速度从木桶中取出请求进行相应。如果木桶已经满了，直接返回请求频率超限的错误码或者页面。   </p><p>漏桶算法是流量最均匀的限流实现方式，一般用于流量“整形”。例如保护数据库的限流，先把对数据库的访问加入到木桶中，worker再以db能够承受的qps从木桶中取出请求，去访问数据库。<br><img src="/img/Golang%E9%99%90%E6%B5%81/4.png">    </p><h3 id="3-2-缺点"><a href="#3-2-缺点" class="headerlink" title="3.2 缺点"></a>3.2 缺点</h3><p>木桶流入请求的速率是不固定的，但是流出的速率是恒定的。这样的话能保护系统资源不被打满，但是面对突发流量时会有大量请求失败，不适合电商抢购和微博出现热点事件等场景的限流。  </p><h2 id="4-令牌桶算法"><a href="#4-令牌桶算法" class="headerlink" title="4. 令牌桶算法"></a>4. 令牌桶算法</h2><h3 id="4-1-原理"><a href="#4-1-原理" class="headerlink" title="4.1 原理"></a>4.1 原理</h3><p>令牌桶是反向的”漏桶”，它是以恒定的速度往木桶里加入令牌，木桶满了则不再加入令牌。服务收到请求时尝试从木桶中取出一个令牌，如果能够得到令牌则继续执行后续的业务逻辑。如果没有得到令牌，直接返回访问频率超限的错误码或页面等，不继续执行后续的业务逻辑。</p><p>特点：由于木桶内只要有令牌，请求就可以被处理，所以令牌桶算法可以支持突发流量<br><img src="/img/Golang%E9%99%90%E6%B5%81/0.png">      </p><p>同时由于往木桶添加令牌的速度是恒定的，且木桶的容量有上限，所以单位时间内处理的请求书也能够得到控制，起到限流的目的。假设加入令牌的速度为 1 token&#x2F;10ms，桶的容量为500，在请求比较的少的时候（小于每10毫秒1个请求）时，木桶可以先”攒”一些令牌（最多500个）。当有突发流量时，一下把木桶内的令牌取空，也就是有500个在并发执行的业务逻辑，之后要等每10ms补充一个新的令牌才能接收一个新的请求。</p><h3 id="4-2-适用场景"><a href="#4-2-适用场景" class="headerlink" title="4.2 适用场景"></a>4.2 适用场景</h3><p>适合电商抢购或者微博出现热点事件这种场景，因为在限流的同时可以应对一定的突发流量。如果采用漏桶那样的均匀速度处理请求的算法，在发生热点时间的时候，会造成大量的用户无法访问，对用户体验的损害比较大。 </p><h3 id="4-3-实现"><a href="#4-3-实现" class="headerlink" title="4.3 实现"></a>4.3 实现</h3><p>golang官方实现了令牌桶限流方法<code>Limiter</code></p><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">type</span> Limiter <span class="hljs-keyword">struct</span> &#123;<br>mu     sync.Mutex<br>limit  Limit<br>burst  <span class="hljs-type">int</span> <span class="hljs-comment">// 令牌桶的大小</span><br>tokens <span class="hljs-type">float64</span><br>last time.Time <span class="hljs-comment">// 上次更新tokens的时间</span><br>lastEvent time.Time <span class="hljs-comment">// 上次发生限速器事件的时间（通过或者限制都是限速器事件）</span><br>&#125; <br></code></pre></td></tr></table></figure><p>其主要字段的作用是：  </p><ul><li>limit：limit字段表示往桶里放Token的速率，它的类型是Limit，是int64的类型别名。设置limit时既可以用数字指定每秒向桶中放多少个Token，也可以指定向桶中放Token的时间间隔，其实指定了每秒放Token的个数后就能计算出放每个Token的时间间隔了。</li><li>burst: 令牌桶的大小。</li><li>tokens: 桶中的令牌。</li><li>last: 上次往桶中放 Token 的时间。</li><li>lastEvent：上次发生限速器事件的时间（通过或者限制都是限速器事件）</li></ul><h4 id="4-3-1-构造限流器"><a href="#4-3-1-构造限流器" class="headerlink" title="4.3.1 构造限流器"></a>4.3.1 构造限流器</h4><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs go">limiter := rate.NewLimiter(<span class="hljs-number">10</span>, <span class="hljs-number">100</span>)<br></code></pre></td></tr></table></figure><p>这里有两个参数：</p><ul><li>第一个参数是 r Limit，设置的是限流器Limiter的limit字段，代表每秒可以向 Token 桶中产生多少 token。Limit 实际上是 float64 的别名。</li><li>第二个参数是 b int，b 代表 Token 桶的容量大小，也就是设置的限流器 Limiter 的burst字段。</li></ul><p>那么，对于以上例子来说，其构造出的限流器的令牌桶大小为 100, 以每秒 10 个 Token 的速率向桶中放置 Token。</p><h4 id="4-3-2-使用限流器"><a href="#4-3-2-使用限流器" class="headerlink" title="4.3.2 使用限流器"></a>4.3.2 使用限流器</h4><p>Limiter 提供了三类方法供程序消费 Token，可以每次消费一个 Token，也可以一次性消费多个 Token。 每种方法代表了当 Token 不足时，各自不同的对应手段，可以阻塞等待桶中Token补充，也可以直接返回取Token失败。   </p><p>其中比较常见的是Wait&#x2F;WaitN方法 </p><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(lim *Limiter)</span></span> Wait(ctx context.Context) (err <span class="hljs-type">error</span>)<br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(lim *Limiter)</span></span> WaitN(ctx context.Context, n <span class="hljs-type">int</span>) (err <span class="hljs-type">error</span>)<br></code></pre></td></tr></table></figure><p>Wait 实际上就是 WaitN(ctx,1)。   </p><p>当使用 Wait 方法消费 Token 时，如果此时桶内 Token 数组不足 (小于 N)，那么 Wait 方法将会阻塞一段时间，直至 Token 满足条件。如果充足则直接返回。  </p><p>这里可以看到，Wait 方法有一个 context 参数。我们可以设置 context 的 Deadline 或者 Timeout，来决定此次 Wait 的最长时间。     </p><p>其他还有两种用法分别如下，具体使用方法可查阅官方文档信息</p><ul><li>Allow&#x2F;AllowN </li><li>Reserve&#x2F;ReserverN</li></ul>]]></content>
+    
+    
+    <categories>
+      
+      <category>Golang</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>Golang</tag>
+      
+      <tag>限流器</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
+    <title>Redis分布式锁</title>
+    <link href="/2023/12/23/Redis%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/"/>
+    <url>/2023/12/23/Redis%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/</url>
+    
+    <content type="html"><![CDATA[<p>分布式锁，就是控制分布式系统不同进程共同访问共享资源的一种锁的实现。如果不同的系统或同一个系统的不同主机之间共享了某个临界资源，往往需要互斥来防止彼此干扰，以保证一致性。 </p><span id="more"></span>   <h2 id="Redis分布式锁的实现方式"><a href="#Redis分布式锁的实现方式" class="headerlink" title="Redis分布式锁的实现方式"></a>Redis分布式锁的实现方式</h2><blockquote><p>在线redis环境：<a href="https://try.redis.io/">https://try.redis.io/</a>   </p></blockquote><h3 id="1-什么是分布式锁"><a href="#1-什么是分布式锁" class="headerlink" title="1. 什么是分布式锁"></a>1. 什么是分布式锁</h3><p>分布式锁就是，控制分布式系统不同进程共同访问共享资源的一种锁的实现。如果不同的系统或同一个系统的不同主机之间共享了某个临界资源，往往需要互斥来防止彼此干扰，以保证一致性。<br>分布式锁一般具有以下特征:  </p><ul><li>互斥性：任意时刻只有一个客户端可持有</li><li>超时释放：持有锁超时可以及时释放，防止死锁和不必要的资源浪费  </li><li>可重入性：一个线程获取锁之后，还可以再次对其请求加锁</li><li>高性能高可用：加锁和解锁需要开销尽量低，同时也要保证高可用 </li><li>安全性：锁只能被持有的客户端删除，不能被其他客户端删除</li></ul><!--  --><p><img src="/img/Redis%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/1.png"></p><h3 id="2-SETNX"><a href="#2-SETNX" class="headerlink" title="2. SETNX"></a>2. SETNX</h3><p>一提到使用Redis作为分布式锁，大家耳熟能详的就会想到<code>SETNX + EXPIRE</code>。即先用<code>setnx</code>来抢锁，然后再用<code>expire</code>设置一个过期时间。</p><blockquote><p>SETNX是 SET IF NOT EXISTS的简称，顾名思义就是不存在就设置<br>命令使用：SETNX key value<br>如果key不存在，设置成功返回1，如果key已经存在，设置失败返回0</p></blockquote><p>但是直接使用SETNX + EXPIRE 指令，会存在一些问题：</p><ul><li>原子性：setnx 和 exipre是两个命令，如果设置过期时间出错，就会导致长时间持有锁得不到释放。</li><li>误删除问题：假设线程a执行完后，主动去释放锁。但它不知道当前的锁可能是线程b持有的（线程a去释放锁时，有可能过期时间已经到了，此时线程b进来占有了锁）。那线程a就把线程b的锁释放掉了，但是线程b临界区业务代码可能都还没执行完成。</li></ul><h4 id="2-1-原子性"><a href="#2-1-原子性" class="headerlink" title="2.1 原子性"></a>2.1 原子性</h4><p>为解决原子性问题，常见的有两种方式:  </p><h5 id="2-1-1-使用Lua脚本"><a href="#2-1-1-使用Lua脚本" class="headerlink" title="2.1.1 使用Lua脚本"></a>2.1.1 使用Lua脚本</h5><p>lua脚本在执行过程中，是可以保证原子处理的，可以将setnx和expire两个命令都放到lua脚本中进行操作。  </p><figure class="highlight lua"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs lua"><span class="hljs-keyword">if</span> redis.call(<span class="hljs-string">&#x27;setnx&#x27;</span>,KEYS[<span class="hljs-number">1</span>],ARGV[<span class="hljs-number">1</span>]) == <span class="hljs-number">1</span> <span class="hljs-keyword">then</span><br>   redis.call(<span class="hljs-string">&#x27;expire&#x27;</span>,KEYS[<span class="hljs-number">1</span>],ARGV[<span class="hljs-number">2</span>])<br><span class="hljs-keyword">else</span><br>   <span class="hljs-keyword">return</span> <span class="hljs-number">0</span><br><span class="hljs-keyword">end</span>;<br></code></pre></td></tr></table></figure><h5 id="2-1-2-使用SET的扩展命令"><a href="#2-1-2-使用SET的扩展命令" class="headerlink" title="2.1.2 使用SET的扩展命令"></a>2.1.2 使用SET的扩展命令</h5><p>虽然<code>SETNX</code>和<code>EXPIRE</code>两个指令是独立的，但是单独的一个SET命令是却是原子的，可以使用SET的参数扩展功能实现NX和EXPIRE的能力<br><code>SET key value [EX seconds] [PX millseconds] NX</code>  </p><blockquote><p>SET key value [EX seconds] [PX milliseconds] NX<br>NX :表示key不存在的时候，才能set成功，也即保证只有第一个客户端请求才能获得锁，而其他客户端请求只能等其释放锁，才能获取。<br>EX seconds :设定key的过期时间，时间单位是秒。<br>PX milliseconds: 设定key的过期时间，单位为毫秒  </p></blockquote><p>在实际的开发过程中，我们一般使用第三方库，不会直接执行redis的cmd命令。可以在使用第三方的sdk时，查看sdk是否已经提供了一些原子的操作，避免自己写原生lua脚本或者命令。比如go-redis中，SETNX + EXPIRE已经可以在一个客户端操作中完成：  </p><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-comment">// Lock 使用 SETNX实现加锁</span><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(c *Client)</span></span> Lock(key, value <span class="hljs-type">string</span>) <span class="hljs-type">error</span> &#123;<br>ret := c.client.SetNX(key, value, time.Minute)<br><span class="hljs-keyword">if</span> ret.Val() &#123;<br>fmt.Println(<span class="hljs-string">&quot;加锁成功&quot;</span>)<br><span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span><br>&#125;<br><span class="hljs-keyword">return</span> errors.New(<span class="hljs-string">&quot;加锁失败&quot;</span>)<br>&#125;<br><br><span class="hljs-comment">// Redis `SET key value [expiration] NX` command.</span><br><span class="hljs-comment">//</span><br><span class="hljs-comment">// Zero expiration means the key has no expiration time.</span><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(c *cmdable)</span></span> SetNX(key <span class="hljs-type">string</span>, value <span class="hljs-keyword">interface</span>&#123;&#125;, expiration time.Duration) *BoolCmd &#123;&#125;<br><br></code></pre></td></tr></table></figure><h4 id="2-2-误删除"><a href="#2-2-误删除" class="headerlink" title="2.2 误删除"></a>2.2 误删除</h4><p>既然锁可能会被别的线程删除，那给锁的value值设置一个标记当前的线程唯一值即可。在删除的时候首先校验值是否相等，只有相等的情况下才可以删除锁。<br>同样的，为保证一致性，值的比较和删除操作需要保证原子性。 </p><figure class="highlight lua"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs lua"><span class="hljs-keyword">if</span> redis.call(<span class="hljs-string">&#x27;get&#x27;</span>,KEYS[<span class="hljs-number">1</span>]) == ARGV[<span class="hljs-number">1</span>] <span class="hljs-keyword">then</span> <br>   <span class="hljs-keyword">return</span> redis.call(<span class="hljs-string">&#x27;del&#x27;</span>,KEYS[<span class="hljs-number">1</span>]) <br><span class="hljs-keyword">else</span><br>   <span class="hljs-keyword">return</span> <span class="hljs-number">0</span><br><span class="hljs-keyword">end</span>;<br></code></pre></td></tr></table></figure><h3 id="3-Redisson"><a href="#3-Redisson" class="headerlink" title="3. Redisson"></a>3. Redisson</h3><p>参考文章：  </p><ul><li><a href="https://blog.csdn.net/qq_34826261/article/details/126177704">https://blog.csdn.net/qq_34826261&#x2F;article&#x2F;details&#x2F;126177704</a>  </li><li><a href="https://zhuanlan.zhihu.com/p/135864820">https://zhuanlan.zhihu.com/p/135864820</a>  </li><li><a href="https://juejin.cn/post/7168802584684134413">https://juejin.cn/post/7168802584684134413</a></li></ul><p>上面介绍的<code>SETNX + Exipred + 原子操作 + 唯一值校验删除</code>的方案在很大程度上已经能够满足使用，但是还有一个可能存在的情况没有解决： </p><ul><li>锁过期释放，但业务还没执行完成：假设线程a获取锁成功，一直在执行临界区的代码。100s过去后，它还没执行完。但这时候锁已经过期了，此时线程b又请求过来。显然线程b就可以获得锁成功，也开始执行临界区的代码。那么问题就来了，临界区的业务代码都不是严格串行执行。</li></ul><p>针对这种问题，Redisson框架做了一些额外的优化，在加锁的同时开启一个定时守护线程，每隔一段时间检查锁是否还存在，存在则对锁的过期时间延长，防止锁过期提前释放。  </p><p>Redisson主要原理及结构如下：  </p><ul><li>基于Redis命令的实现： Redisson利用了Redis的单线程特性和原子操作的特点。它通过调用Redis的SETNX命令来尝试获取锁，当锁不存在时，才能获取到锁。</li><li>心跳续约(看门狗)机制： 为防止业务逻辑还没执行完锁就到期的问题，Redisson在获取锁之后会启动一个定时任务来周期性地续约锁的有效时间。</li><li>实现可重入锁： Redisson支持可重入锁，保证同一线程在持有锁的情况下能够多次获取锁，而不会因为自己已经持有锁而被阻塞。  </li><li>分布式锁释放的安全性保证： Redisson通过Lua脚本来释放锁，保证了释放锁的原子性。使用Lua脚本可以保证释放锁的操作是原子的，避免了在执行释放锁逻辑时出现的并发问题。</li></ul><p><img src="/img/Redis%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/redisson.png">   </p><blockquote><p>部分核心逻辑如下： </p><ul><li>加锁 <ul><li>每次加锁都有一个加锁等待时间 </li><li>如果加锁成功，直接返回true</li><li>如果加锁失败，则订阅锁释放消息，在加锁等待时间内监听锁释放消息，如果一直没有监听到，则取消订阅并返回false </li><li>如果在等待时间内监听到锁释放消息，则进入一个不断重试获取锁的循环</li></ul></li><li>续期机制  <ul><li>只有在加锁时没有设置过期时间时才会启用Watch Dog机制  </li><li>Watch Dog启动守护线程，守护线程轮询周期为：internalLockLeaseTime&#x2F;3。internalLockLeaseTime的默认值由lockWatchdogTimeout来配置。默认值为30秒。也就是说默认情况下，守护线程每10秒检查续期</li></ul></li></ul></blockquote><h3 id="4-RedLock"><a href="#4-RedLock" class="headerlink" title="4. RedLock"></a>4. RedLock</h3><p>Redisson解决了锁超时续期自动释放的问题，但是还有一种极端的情况没有解决：  </p><ul><li>客户端A尝试在Redis Master节点上锁，客户端A成功获得锁的瞬间，锁数据还没有同步至Slave节点。这时Master挂了，于是发生主从切换，其它客户端连接到Slave节点尝试抢占锁，由于Slave没有客户端A的上锁信息。自然又会有一个新的客户端B抢到锁，此时就会出现两个客户端同时拥有分布式锁的奇葩现像。</li></ul><p>鉴于此，Redis作者提出一种更高级的RedLock算法，它需要部署 N （N &gt;&#x3D; 2n+1）个独立的 Redis master实例，且实例之间没有任何的联系。也就是说，只要一半以上的 Redis 实例加锁成功，那么 Redlock 依然可以正常运行。  </p><p><img src="/img/Redis%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/redlock.png">  </p><p>假设我们有 5 个 Redis 实例，当我们对 order1 这个订单加锁时，先记录当前时间用于统计加锁过程花费的时间，然后依次让 5 个 Redis 实例执行 SET order1 token NX EX 60 命令，最后统计<strong>加锁成功的实例数量以及加锁过程耗费的时间</strong>  </p><ul><li>统计个数: 当超过一半的加锁成功，认为是成功   </li><li>统计时间: 避免整体的加锁时长已经超过锁本身的有效时间，比如锁的过期时间是3s，但是加锁过程耗费了4s，肯定是认为加锁失败的。</li></ul><p>解锁过程相对简单，只需要5个实例依次删除redis key即可。   </p><p>Redlock在Redisson中也有对应的实现，不过在最新版的Redisson中，Redlock已经不再建议使用.因为现在加锁操作实现，可以等所有从节点数据同步了才算加锁成功。这样的话就可以保证主从切换锁不会丢失了。  </p><pre><code class="hljs">8.4. RedLockThis object is deprecated. Use RLock or RFencedLock instead.</code></pre><p>可以通过Redis的Wait命令实现主从同步  </p><blockquote><p>Redis WAIT 命令用来阻塞当前客户端，直到所有先前的写入命令成功传输并且至少由指定数量的从节点复制完成。如果执行超过超时时间（以毫秒为单位），则即使尚未完成指定数量的从结点复制，该命令也会返回。</p></blockquote>]]></content>
+    
+    
+    <categories>
+      
+      <category>Redis</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>Redis</tag>
+      
+      <tag>分布式锁</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  
+</search>
