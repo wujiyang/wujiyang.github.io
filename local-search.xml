@@ -4,6 +4,60 @@
   
   
   <entry>
+    <title>MongoDB复合索引的ESR原则</title>
+    <link href="/2024/02/21/MongoDB%E5%A4%8D%E5%90%88%E7%B4%A2%E5%BC%95%E7%9A%84ESR%E5%8E%9F%E5%88%99/"/>
+    <url>/2024/02/21/MongoDB%E5%A4%8D%E5%90%88%E7%B4%A2%E5%BC%95%E7%9A%84ESR%E5%8E%9F%E5%88%99/</url>
+    
+    <content type="html"><![CDATA[<p>提到索引，大家都不会陌生，它的重要性在数据库中不言而喻。常见的存储如MysQL，MongoDB都支持多种类型的索引。本文主要以实际工作中碰到的例子聊一下MongoDB中的复合索引。</p><span id="more"></span>  <p>所谓复合索引，就是包含多个字段的索引，比如index(a,b)。复合索引在使用的过程中主要有两个原则： </p><ul><li>最左匹配原则 </li><li>ESR原则</li></ul><h3 id="1-最左匹配原则"><a href="#1-最左匹配原则" class="headerlink" title="1. 最左匹配原则"></a>1. 最左匹配原则</h3><p>最左匹配原则比较好理解，他和MySQL中的最左匹配原则一致，即最左优先：在检索数据时从复合索引的最左边开始匹配。</p><p>复合索引创建时一个基本的原则就是：将选择性最强的列放到最前面。</p><p>选择性最高指的是数据的重复值最少，因为区分度高的列能够很容易过滤掉很多的数据。如果组合索引中第一次能够过滤掉很多的数据，后面的索引查询的数据范围就小了很多了。</p><h3 id="2-ESR原则"><a href="#2-ESR原则" class="headerlink" title="2. ESR原则"></a>2. ESR原则</h3><p><a href="https://www.mongodb.com/docs/manual/tutorial/equality-sort-range-rule/">The ESR (Equality, Sort, Range) Rules</a> </p><p>简单来说就是我们在构建复合索引时，需要根据以下三项原则的顺序进行构建：  </p><ul><li>等值查询字段放在最前面</li><li>中间放排序字段</li><li>最后是范围查询字段</li></ul><p>E 放在前面比较好理解，等值匹配过滤掉大量数据，「那为什么是 ESR 不是 ERS 呢?」<br><img src="/img/MongoDB%E5%A4%8D%E5%90%88%E7%B4%A2%E5%BC%95%E7%9A%84ESR%E5%8E%9F%E5%88%99/1.png"><br>如图所示，如果把范围匹配放在中间，那么后续我们排序的时候只能进行「内存排序」，内存排序是比较消耗资源的，数据量大时可能会面临着「多次的磁盘读取刷内存操作」，对性能影响比较显著。</p><h3 id="3-实际案例分析"><a href="#3-实际案例分析" class="headerlink" title="3. 实际案例分析"></a>3. 实际案例分析</h3><p>以上两个原则看起来比较简单，但笔者在实际应用中还是踩了一些坑。</p><p>我有一个这样的mongo集合： </p><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">type</span> Demo <span class="hljs-keyword">struct</span> &#123;<br><span class="hljs-comment">// QueueID 队列id</span><br>QueueID <span class="hljs-type">string</span> <span class="hljs-string">`bson:&quot;queue_id,omitempty&quot;`</span><br><br><span class="hljs-comment">// Status 任务状态</span><br>Status <span class="hljs-type">int</span> <span class="hljs-string">`bson:&quot;status,omitempty&quot;`</span><br><br><span class="hljs-comment">// UpdateTime 更新时间</span><br>UpdateTime time.Time <span class="hljs-string">`bson:&quot;update_time,omitempty&quot;`</span><br><br><span class="hljs-comment">// 其他字段</span><br>xxxxx<br><br>&#125; <br></code></pre></td></tr></table></figure><p>mongo在查询时需要执行类似如下条件的查询：</p><pre><code class="go">db.collections.find(&#123; queue_id: 123, status: &#123; $in: [1, 2, 3] &#125; &#125;).sort(&#123; updateTime: 1 &#125;).limit(1)</code></pre><p>即：查询指定queue_id, 指定status范围，并按照updateTime进行升序的一条记录。   </p><p>在初步了解ESR原则后，我一想，这不就是queue_id为等值查询、updateTime为排序查询、status为范围查询的经典情况吗，大手一挥就创建了一个（queue_id, updateTime, status）的复合索引并愉快的上线了。</p><p>然而待数据量增大后，发现一个比较严重的问题，Mongo实例的CPU飙到了60%，排查原因发现索引执行不太正常。</p><p>参考官方资料后，发现in在执行的时候，可能是等值查询也可能是范围查询<br><img src="/img/MongoDB%E5%A4%8D%E5%90%88%E7%B4%A2%E5%BC%95%E7%9A%84ESR%E5%8E%9F%E5%88%99/2.png">    </p><ul><li>如果in单独使用，就是等值查询</li><li>如果in和sort一起使用，就是范围查询（针对同一个字段）</li></ul><p>所以在本例中，status的使用是等值查询，应该放在updateTime的前面，将索引修改为（queue_id, status, updateTime）后，CPU使用率即刻下降到30%左右。</p>]]></content>
+    
+    
+    <categories>
+      
+      <category>MongoDB</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>MongoDB</tag>
+      
+      <tag>索引</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
+    <title>深入理解Golang泛型</title>
+    <link href="/2024/02/18/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3golang%E6%B3%9B%E5%9E%8B/"/>
+    <url>/2024/02/18/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3golang%E6%B3%9B%E5%9E%8B/</url>
+    
+    <content type="html"><![CDATA[]]></content>
+    
+    
+    <categories>
+      
+      <category>Golang</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>Golang</tag>
+      
+      <tag>泛型</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
+  <entry>
     <title>kafka高性能分析</title>
     <link href="/2024/02/17/kafka%E9%AB%98%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90/"/>
     <url>/2024/02/17/kafka%E9%AB%98%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90/</url>
