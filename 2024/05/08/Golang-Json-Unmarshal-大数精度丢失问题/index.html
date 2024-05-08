@@ -16,27 +16,27 @@
   <meta name="author" content="wujiyang">
   <meta name="keywords" content="">
   
-    <meta name="description" content="切片（Slice），是Golang开发中常用到的一种基础数据结构，和数组比较相似。在日常开发中，经常见到nil切片、空切片和零切片的概念。今天主要分享一下他们之间的区别。">
+    <meta name="description" content="在Golang中，使用Unmarshal将一个Json数字解析为interface&#123;&#125;时, int64等大类型数字会存在精度丢失的问题。     一般来说，长度超过16位的数字易发生数据截断，而且数据值变成了科学计数法。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Golang Empty 切片 vs Nil 切片">
-<meta property="og:url" content="https://wujiyang.github.io/2024/04/10/Golang-Empty-Nil-Slice/index.html">
+<meta property="og:title" content="Golang Json Unmarshal 大数精度丢失问题">
+<meta property="og:url" content="https://wujiyang.github.io/2024/05/08/Golang-Json-Unmarshal-%E5%A4%A7%E6%95%B0%E7%B2%BE%E5%BA%A6%E4%B8%A2%E5%A4%B1%E9%97%AE%E9%A2%98/index.html">
 <meta property="og:site_name" content="wujiyang">
-<meta property="og:description" content="切片（Slice），是Golang开发中常用到的一种基础数据结构，和数组比较相似。在日常开发中，经常见到nil切片、空切片和零切片的概念。今天主要分享一下他们之间的区别。">
+<meta property="og:description" content="在Golang中，使用Unmarshal将一个Json数字解析为interface&#123;&#125;时, int64等大类型数字会存在精度丢失的问题。     一般来说，长度超过16位的数字易发生数据截断，而且数据值变成了科学计数法。">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://wujiyang.github.io/img/Golang-Empty-Nil-Slice/0.png">
-<meta property="article:published_time" content="2024-04-10T13:17:53.000Z">
-<meta property="article:modified_time" content="2024-04-10T14:12:01.685Z">
+<meta property="og:image" content="https://wujiyang.github.io/img/Golang-Json-Unmarshal/0.png">
+<meta property="article:published_time" content="2024-05-08T14:25:35.000Z">
+<meta property="article:modified_time" content="2024-05-08T14:35:14.194Z">
 <meta property="article:author" content="wujiyang">
 <meta property="article:tag" content="Golang">
-<meta property="article:tag" content="Slice">
+<meta property="article:tag" content="JSON">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://wujiyang.github.io/img/Golang-Empty-Nil-Slice/0.png">
+<meta name="twitter:image" content="https://wujiyang.github.io/img/Golang-Json-Unmarshal/0.png">
   
   
     <meta name="referrer" content="no-referrer-when-downgrade">
   
   
-  <title>Golang Empty 切片 vs Nil 切片 - wujiyang</title>
+  <title>Golang Json Unmarshal 大数精度丢失问题 - wujiyang</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -202,7 +202,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="Golang Empty 切片 vs Nil 切片"></span>
+            <span id="subtitle" data-typed-text="Golang Json Unmarshal 大数精度丢失问题"></span>
           
         </div>
 
@@ -218,7 +218,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          533 字
+          595 字
         
       </span>
     
@@ -266,63 +266,32 @@
       <div class="container nopadding-x-md" id="board-ctn">
         <div id="board">
           <article class="post-content mx-auto">
-            <h1 id="seo-header">Golang Empty 切片 vs Nil 切片</h1>
+            <h1 id="seo-header">Golang Json Unmarshal 大数精度丢失问题</h1>
             
             
               <div class="markdown-body">
                 
-                <p>切片（Slice），是Golang开发中常用到的一种基础数据结构，和数组比较相似。在日常开发中，经常见到nil切片、空切片和零切片的概念。今天主要分享一下他们之间的区别。</p>
-<span id="more"></span>  
+                <p>在Golang中，使用Unmarshal将一个Json数字解析为<code>interface&#123;&#125;</code>时, int64等大类型数字会存在精度丢失的问题。    </p>
+<p>一般来说，长度超过16位的数字易发生数据截断，而且数据值变成了科学计数法。</p>
+<span id="more"></span>   
 
-<h2 id="1-基本对比"><a href="#1-基本对比" class="headerlink" title="1. 基本对比"></a>1. 基本对比</h2><h3 id="1-1-结论"><a href="#1-1-结论" class="headerlink" title="1.1 结论"></a>1.1 结论</h3><p>empty slice vs nil slice     </p>
-<ul>
-<li>相同点   <ul>
-<li>they both have zero length and capacity,   </li>
-<li>they can be used with the same effect in for loops and append functions,</li>
-<li>and they even look the same when printed.</li>
-</ul>
-</li>
-<li>不同点   <ul>
-<li>nil切片和nil比较的结果是true  </li>
-<li>empty切片和nil比较的结果是false</li>
-</ul>
-</li>
-</ul>
-<h3 id="1-2-nil-切片"><a href="#1-2-nil-切片" class="headerlink" title="1.2 nil 切片"></a>1.2 nil 切片</h3><blockquote>
-<p>nil slice: 长度和容量都为0，并且和nil比较的结果true的切片<br>一般可以通过直接定义变量或者new创建   </p>
+<h2 id="案例"><a href="#案例" class="headerlink" title="案例"></a>案例</h2><p>假设有一个长度为17的json大数字</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs golang"><span class="hljs-keyword">var</span> str = <span class="hljs-string">`&#123;&quot;id&quot;:10000649949036001&#125;`</span><br></code></pre></td></tr></table></figure>
+
+<p>如果直接使用json的interface进行解析, 会得到 10000649949036000, 而不是我们想要的10000649949036001 </p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs golang"><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">ParseWithInterface</span><span class="hljs-params">()</span></span> &#123;<br>	<span class="hljs-keyword">var</span> test <span class="hljs-keyword">map</span>[<span class="hljs-type">string</span>]<span class="hljs-keyword">interface</span>&#123;&#125;<br><br>	<span class="hljs-keyword">if</span> err := json.Unmarshal([]<span class="hljs-type">byte</span>(str), &amp;test); err != <span class="hljs-literal">nil</span> &#123;<br>		fmt.Println(err)<br>	&#125;<br><br>	fmt.Println(test)<br><br>	dataBytes, err := json.Marshal(test)<br>	<span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> &#123;<br>		<span class="hljs-built_in">panic</span>(err)<br>	&#125;<br>	fmt.Printf(<span class="hljs-string">&quot;%+s\n&quot;</span>, <span class="hljs-type">string</span>(dataBytes))<br>&#125;<br><br><span class="hljs-comment">// 输出</span><br><span class="hljs-comment">// map[id:1.0000649949036e+16]</span><br><span class="hljs-comment">// &#123;&quot;id&quot;:10000649949036000&#125;  </span><br><br></code></pre></td></tr></table></figure>
+<h2 id="原因"><a href="#原因" class="headerlink" title="原因"></a>原因</h2><p>原因就出在了interface{}上，在golang中，当数据结构未知，使用map[string]interface{}接收反序列化结果时，会使用float64来进行结果解析，而float类型在处理的过程中时会有精度丢失的，一般超过16位就会发生，同时float64在处理的数据的时候，一般超过6位就会变成科学记数法。使用float64对json number进行解析可以在json的官方代码中找到。</p>
+<blockquote>
+<p>&#x2F;&#x2F; To unmarshal JSON into an interface value,<br>&#x2F;&#x2F; Unmarshal stores one of these in the interface value:<br>&#x2F;&#x2F;<br>&#x2F;&#x2F;	bool, for JSON booleans<br>&#x2F;&#x2F;	float64, for JSON numbers<br>&#x2F;&#x2F;	string, for JSON strings<br>&#x2F;&#x2F;	[]interface{}, for JSON arrays<br>&#x2F;&#x2F;	map[string]interface{}, for JSON objects<br>&#x2F;&#x2F;	nil for JSON null</p>
 </blockquote>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs golang"><span class="hljs-keyword">var</span> slice1 []<span class="hljs-type">int</span><br><span class="hljs-keyword">var</span> slice2 = *<span class="hljs-built_in">new</span>([]<span class="hljs-type">int</span>)<br>fmt.Println(slice1, <span class="hljs-built_in">len</span>(slice1), <span class="hljs-built_in">cap</span>(slice1), slice1 == <span class="hljs-literal">nil</span>)<br>fmt.Println(slice2, <span class="hljs-built_in">len</span>(slice2), <span class="hljs-built_in">cap</span>(slice2), slice2 == <span class="hljs-literal">nil</span>)  <br><span class="hljs-comment">// [] 0 0 true</span><br><span class="hljs-comment">// [] 0 0 true</span><br></code></pre></td></tr></table></figure>
+<h2 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h2><p>既然上文已经说了int64反序列化精度丢失的原因是使用了float64进行解析，那么我们只需要在解析时强行指定不使用float64解析即可。</p>
+<h3 id="使用Int64解析"><a href="#使用Int64解析" class="headerlink" title="使用Int64解析"></a>使用Int64解析</h3><p>在知道具体类型的情况下，可以直接定义结构体为map[string]int64, 这样在解析时，就会使用int64进行解析。</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs golang"><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">ParseWithInt64</span><span class="hljs-params">()</span></span> &#123;<br>	<span class="hljs-keyword">var</span> data <span class="hljs-keyword">map</span>[<span class="hljs-type">string</span>]<span class="hljs-type">int64</span><br>	str := <span class="hljs-string">`&#123;&quot;id&quot;:10000649949036001&#125;`</span><br>	err := json.Unmarshal([]<span class="hljs-type">byte</span>(str), &amp;data)<br>	<span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> &#123;<br>		fmt.Println(err)<br>	&#125;<br><br>	fmt.Println(data)<br>&#125;<br><span class="hljs-comment">// 输出</span><br><span class="hljs-comment">// map[id:10000649949036001]</span><br></code></pre></td></tr></table></figure>
 
-<p>可以简单理解为nil切片是只声明但是未初始化的切片。   </p>
-<h3 id="1-3-empty-切片"><a href="#1-3-empty-切片" class="headerlink" title="1.3 empty 切片"></a>1.3 empty 切片</h3><blockquote>
-<p>empty slice: 长度和容量都为0，但是和nil比较的结果为false的切片<br>一般可以通过声明一个长度为0的切片创建  </p>
-</blockquote>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs golang"><span class="hljs-keyword">var</span> slice3 = []<span class="hljs-type">int</span>&#123;&#125;<br><span class="hljs-keyword">var</span> slice4 = <span class="hljs-built_in">make</span>([]<span class="hljs-type">int</span>, <span class="hljs-number">0</span>)<br>fmt.Println(slice3, <span class="hljs-built_in">len</span>(slice3), <span class="hljs-built_in">cap</span>(slice3), slice3 == <span class="hljs-literal">nil</span>)<br>fmt.Println(slice4, <span class="hljs-built_in">len</span>(slice4), <span class="hljs-built_in">cap</span>(slice4), slice4 == <span class="hljs-literal">nil</span>)  <br><span class="hljs-comment">// [] 0 0 false</span><br><span class="hljs-comment">// [] 0 0 false</span><br></code></pre></td></tr></table></figure>
+<h3 id="利用UseNumber"><a href="#利用UseNumber" class="headerlink" title="利用UseNumber"></a>利用UseNumber</h3><p>golang json提供了一种额外的解析方式，可以在解析的过程使用指定使用Number类型而不是float64进行解析，这样就可以避免精度丢失的问题。</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs golang"><span class="hljs-comment">// convertNumber converts the number literal s to a float64 or a Number</span><br><span class="hljs-comment">// depending on the setting of d.useNumber.</span><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(d *decodeState)</span></span> convertNumber(s <span class="hljs-type">string</span>) (any, <span class="hljs-type">error</span>) &#123;<br>	<span class="hljs-keyword">if</span> d.useNumber &#123;<br>		<span class="hljs-keyword">return</span> Number(s), <span class="hljs-literal">nil</span><br>	&#125;<br>	f, err := strconv.ParseFloat(s, <span class="hljs-number">64</span>)<br>	<span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> &#123;<br>		<span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, &amp;UnmarshalTypeError&#123;Value: <span class="hljs-string">&quot;number &quot;</span> + s, Type: reflect.TypeOf(<span class="hljs-number">0.0</span>), Offset: <span class="hljs-type">int64</span>(d.off)&#125;<br>	&#125;<br>	<span class="hljs-keyword">return</span> f, <span class="hljs-literal">nil</span><br>&#125;<br></code></pre></td></tr></table></figure>
 
-<p>可以简单理解empty切片是声明后切初始化了长度为0的切片。</p>
-<h3 id="1-4-零-切片"><a href="#1-4-零-切片" class="headerlink" title="1.4 零 切片"></a>1.4 零 切片</h3><blockquote>
-<p>零切片： 叫法不常见，主要是值长度部位0，但是内部数组元素都是零值或者nil的切片<br>使用make创建的长度不为0的初始切片就是零切片  </p>
-</blockquote>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs golang">slice5 := <span class="hljs-built_in">make</span>([]<span class="hljs-type">int</span>, <span class="hljs-number">5</span>)  <span class="hljs-comment">// 0 0 0 0 0</span><br>slice6 := <span class="hljs-built_in">make</span>([]*<span class="hljs-type">int</span>, <span class="hljs-number">5</span>) <span class="hljs-comment">// nil nil nil nil nil</span><br>fmt.Println(slice5, <span class="hljs-built_in">len</span>(slice5), <span class="hljs-built_in">cap</span>(slice5), slice5 == <span class="hljs-literal">nil</span>)<br>fmt.Println(slice6, <span class="hljs-built_in">len</span>(slice6), <span class="hljs-built_in">cap</span>(slice6), slice6 == <span class="hljs-literal">nil</span>)<br><span class="hljs-comment">// [0 0 0 0 0] 5 5 false</span><br><span class="hljs-comment">// [nil nil nil nil nil] 5 5 false</span><br></code></pre></td></tr></table></figure>
-
-<h2 id="2-底层原理"><a href="#2-底层原理" class="headerlink" title="2 底层原理"></a>2 底层原理</h2><p>golang的slice底层结构体由3个字段构成：</p>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs golang"><span class="hljs-keyword">type</span> slice <span class="hljs-keyword">struct</span>&#123;<br>    ptr unsafe.Pointer <br>    <span class="hljs-built_in">len</span> <span class="hljs-type">int</span> <br>    <span class="hljs-built_in">cap</span> <span class="hljs-type">int</span><br>&#125;<br><br></code></pre></td></tr></table></figure>
-
-<p>其中len和cap分别是切片的长度和容量，而ptr则是指向底层数组的指针。    </p>
-<p>所谓nil切片，就是ptr指向的指针也为nil<br><img src="/img/Golang-Empty-Nil-Slice/1.jpg" srcset="/img/loading.gif" lazyload>     </p>
-<p>可以通过一个小实验验证指针的数据：  </p>
-<pre><code class="golang">var s1 []int  
-s2 := []int&#123;&#125;  
-s3 := make([]int, 0)
-
-fmt.Printf(&quot;s1 (addr: %p): %+8v\n&quot;, &amp;s1, *(*reflect.SliceHeader)(unsafe.Pointer(&amp;s1)))
-fmt.Printf(&quot;s2 (addr: %p): %+8v\n&quot;, &amp;s2, *(*reflect.SliceHeader)(unsafe.Pointer(&amp;s2))) 
-fmt.Printf(&quot;s3 (addr: %p): %+8v\n&quot;, &amp;s3, *(*reflect.SliceHeader)(unsafe.Pointer(&amp;s3))) 
-// s1 (addr: 0xc0000080d8): &#123;Data:       0 Len:       0 Cap:       0&#125;
-// s2 (addr: 0xc0000080f0): &#123;Data:12760120 Len:       0 Cap:       0&#125;
-// s3 (addr: 0xc000008108): &#123;Data:12760120 Len:       0 Cap:       0&#125;
-</code></pre>
-
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs golang"><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">ParseUseNumber</span><span class="hljs-params">()</span></span> &#123;<br>	<span class="hljs-keyword">var</span> test <span class="hljs-keyword">map</span>[<span class="hljs-type">string</span>]<span class="hljs-keyword">interface</span>&#123;&#125;<br><br>	d := json.NewDecoder(bytes.NewReader([]<span class="hljs-type">byte</span>(str)))<br>	d.UseNumber()<br>	<span class="hljs-keyword">if</span> err := d.Decode(&amp;test); err != <span class="hljs-literal">nil</span> &#123;<br>		fmt.Println(err)<br>	&#125;<br><br>	fmt.Println(test)<br>&#125;<br><br><span class="hljs-comment">// 输出</span><br><span class="hljs-comment">// map[id:10000649949036001]</span><br></code></pre></td></tr></table></figure>
                 
               </div>
             
@@ -357,7 +326,7 @@ fmt.Printf(&quot;s3 (addr: %p): %+8v\n&quot;, &amp;s3, *(*reflect.SliceHeader)(u
       
         <a href="/tags/Golang/" class="print-no-link">#Golang</a>
       
-        <a href="/tags/Slice/" class="print-no-link">#Slice</a>
+        <a href="/tags/JSON/" class="print-no-link">#JSON</a>
       
     </div>
   
@@ -369,8 +338,8 @@ fmt.Printf(&quot;s3 (addr: %p): %+8v\n&quot;, &amp;s3, *(*reflect.SliceHeader)(u
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>Golang Empty 切片 vs Nil 切片</div>
-      <div>https://wujiyang.github.io/2024/04/10/Golang-Empty-Nil-Slice/</div>
+      <div>Golang Json Unmarshal 大数精度丢失问题</div>
+      <div>https://wujiyang.github.io/2024/05/08/Golang-Json-Unmarshal-大数精度丢失问题/</div>
     </div>
     <div class="license-meta">
       
@@ -382,7 +351,7 @@ fmt.Printf(&quot;s3 (addr: %p): %+8v\n&quot;, &amp;s3, *(*reflect.SliceHeader)(u
       
         <div class="license-meta-item license-meta-date">
           <div>发布于</div>
-          <div>2024年4月10日</div>
+          <div>2024年5月8日</div>
         </div>
       
       
@@ -414,18 +383,12 @@ fmt.Printf(&quot;s3 (addr: %p): %+8v\n&quot;, &amp;s3, *(*reflect.SliceHeader)(u
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2024/05/08/Golang-Json-Unmarshal-%E5%A4%A7%E6%95%B0%E7%B2%BE%E5%BA%A6%E4%B8%A2%E5%A4%B1%E9%97%AE%E9%A2%98/" title="Golang Json Unmarshal 大数精度丢失问题">
-                        <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">Golang Json Unmarshal 大数精度丢失问题</span>
-                        <span class="visible-mobile">上一篇</span>
-                      </a>
-                    
                   </article>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2024/03/03/%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3golang%E6%B3%9B%E5%9E%8B/" title="深入理解Golang泛型">
-                        <span class="hidden-mobile">深入理解Golang泛型</span>
+                      <a href="/2024/04/10/Golang-Empty-Nil-Slice/" title="Golang Empty 切片 vs Nil 切片">
+                        <span class="hidden-mobile">Golang Empty 切片 vs Nil 切片</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
