@@ -1,0 +1,766 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="wujiyang">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="BigCache是一个快速，支持并发访问，自淘汰的内存型缓存，可以在存储大量元素的基础上依然保持高性能。BigCache将元素保存在堆上的同时避免了GC的开销。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="BigCache解析">
+<meta property="og:url" content="https://wujiyang.github.io/2024/08/10/BigCache%E8%A7%A3%E6%9E%90/index.html">
+<meta property="og:site_name" content="wujiyang">
+<meta property="og:description" content="BigCache是一个快速，支持并发访问，自淘汰的内存型缓存，可以在存储大量元素的基础上依然保持高性能。BigCache将元素保存在堆上的同时避免了GC的开销。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://wujiyang.github.io/img/BigCache%E8%A7%A3%E6%9E%90/0.png">
+<meta property="article:published_time" content="2024-08-10T09:50:28.000Z">
+<meta property="article:modified_time" content="2024-08-10T10:10:31.420Z">
+<meta property="article:author" content="wujiyang">
+<meta property="article:tag" content="BigCache">
+<meta property="article:tag" content="本地缓存">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://wujiyang.github.io/img/BigCache%E8%A7%A3%E6%9E%90/0.png">
+  
+  
+    <meta name="referrer" content="no-referrer-when-downgrade">
+  
+  
+  <title>BigCache解析 - wujiyang</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"wujiyang.github.io","root":"/","version":"1.9.7","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 7.0.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 50vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>wujiyang</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="BigCache解析"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          2.7k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          23 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">BigCache解析</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>BigCache是一个快速，支持并发访问，自淘汰的内存型缓存，可以在存储大量元素的基础上依然保持高性能。BigCache将元素保存在堆上的同时避免了GC的开销。</p>
+<span id="more"></span>  
+
+<h2 id="1-简介"><a href="#1-简介" class="headerlink" title="1. 简介"></a>1. 简介</h2><p>缓存是系统提升并发能力、降低时延的利器，根据存储介质和使用场景，我们分为本地缓存与分布式缓存两种：</p>
+<ul>
+<li>本地缓存：一般在进程内，最简单的sync.Map就可以是一个并发安全的本地缓存。常见的有LocalCache、BigCache等。</li>
+<li>分布式缓存：一般会用到Redis&#x2F;MemCached等分布式内存数据库实现，想比如本地缓存，分布式数据库增加了网络开销</li>
+</ul>
+<p>BigCache是一个快速，支持并发访问，自淘汰的内存型缓存，可以在存储大量元素的基础上依然保持高性能。BigCache将元素保存在堆上的同时避免了GC的开销。</p>
+<p>源码地址：<a target="_blank" rel="noopener" href="https://github.com/allegro/bigcache">https://github.com/allegro/bigcache</a><br>本文示例代码取自版本 v1.2.1  </p>
+<h2 id="2-设计思想"><a href="#2-设计思想" class="headerlink" title="2. 设计思想"></a>2. 设计思想</h2><h3 id="2-1-整体设计"><a href="#2-1-整体设计" class="headerlink" title="2.1 整体设计"></a>2.1 整体设计</h3><ul>
+<li>多： 缓存的元素数量非常大，可以达到百万级或千万级。</li>
+<li>快： 对延迟有非常高的要求，平均延迟要求在5毫秒以内。支持10k rps级别的访问速度。</li>
+<li>稳： 99.9分位延迟应在10毫秒左右，99.999分位延迟应在400毫秒左右。</li>
+</ul>
+<p>目前有许多开源的cache库，大部分都是基于map实现的，例如go-cache,ttl-cache等。bigcache明确指出，当数据量巨大时，直接基于map实现的cache库将出现严重的性能问题，这也是他们设计了一个全新的cache库的原因。</p>
+<ul>
+<li>核心设计思想<ul>
+<li>数据分片存储，以降低锁冲突并提升并发量。</li>
+<li>避免在map中存储指针，从而避免在GC时对map进行遍历扫描。</li>
+<li>采用FIFO式的Ring Buffer设计，简化整体内存设计逻辑。</li>
+</ul>
+</li>
+</ul>
+<p><img src="/img/BigCache%E8%A7%A3%E6%9E%90/1.png" srcset="/img/loading.gif" lazyload></p>
+<h3 id="2-2-数据分片-Shard"><a href="#2-2-数据分片-Shard" class="headerlink" title="2.2 数据分片 Shard"></a>2.2 数据分片 Shard</h3><p>使用map做缓存时，实现并发安全的方式就是加一把锁。但是如果数据过多时，并发请求会导致较多的锁冲突，为了解决这种问题，BigCache采用了分片的方式降低锁粒度。在声明一个BigCache时，表面上看是一个结构体，实际上是一个数组，底层分成了N个互不关联的部分。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">type</span> BigCache <span class="hljs-keyword">struct</span> &#123;<br>	shards       []*cacheShard<br>	lifeWindow   <span class="hljs-type">uint64</span><br>	clock        clock<br>	hash         Hasher<br>	config       Config<br>	shardMask    <span class="hljs-type">uint64</span><br>	maxShardSize <span class="hljs-type">uint32</span><br>	<span class="hljs-built_in">close</span>        <span class="hljs-keyword">chan</span> <span class="hljs-keyword">struct</span>&#123;&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>在Set或者Get数据时，先对key计算hash值，根据hash值取余得到目标shard，之后所有的读写操作都是在各自的shard上进行。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(c *BigCache)</span></span> Set(key <span class="hljs-type">string</span>, entry []<span class="hljs-type">byte</span>) <span class="hljs-type">error</span> &#123;<br>	hashedKey := c.hash.Sum64(key)<br>	shard := c.getShard(hashedKey)<br>	<span class="hljs-keyword">return</span> shard.set(key, hashedKey, entry)<br>&#125;<br></code></pre></td></tr></table></figure>
+<p>在计算分片数时，取余操作使用的是位运算，所有分片数要设置为2的幂次方。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(c *BigCache)</span></span> getShard(hashedKey <span class="hljs-type">uint64</span>) (shard *cacheShard) &#123;<br>	<span class="hljs-keyword">return</span> c.shards[hashedKey&amp;c.shardMask]<br>&#125;<br><span class="hljs-comment">// shardMask = shardNum - 1</span><br></code></pre></td></tr></table></figure>
+<ul>
+<li>特点：<ul>
+<li>减少锁冲突，提升并发量：当一个shard被加上Lock的时候，其他shard的读写不受影响。</li>
+<li>shard一旦建好，将不再改变，无需考虑shard变化时的数据迁移问题，shard之间操作无需加锁。</li>
+<li>shard个数必须是2的平方数。对2的平方数取余可以改成位运算，会比传统的%快很多</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-3-Map-GC优化"><a href="#2-3-Map-GC优化" class="headerlink" title="2.3 Map GC优化"></a>2.3 Map GC优化</h3><p>在golang中，map的key和value一旦涉及到指针类型，在GC的时候就会触发遍历扫描，当数据量级很大时， GC延迟严重。<br>在bigcache的设计中，map定义为map[uint64]uint32 ，避免了存储任何指针。结构定义如下:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">type</span> cacheShard <span class="hljs-keyword">struct</span> &#123;<br>	hashmap     <span class="hljs-keyword">map</span>[<span class="hljs-type">uint64</span>]<span class="hljs-type">uint32</span><br>	entries     queue.BytesQueue<br>	...<br>&#125;<br></code></pre></td></tr></table></figure>
+<p>其中：</p>
+<ul>
+<li>hashmap的key是cache key的hash值，而value仅仅是个uint32。value存储的不再是实际值，而是value在 BytesQueue中的索引。</li>
+<li>entries存储的是实际value值，它是一个ring buffer的内存结构，本质上就是个超大的[]byte数组，里面存放了所有的原始数据。每个原始数据就存放在这个大[]byte数组中的其中一段。<br>之所以用一个大的[]byte数组和ring buffer结构，除了方便管理和复用内存之外，一个更重要的原因是：对于[]byte数组, GC时只用看做一个变量扫描，无需再遍历全部数组。这样又避免了海量数据对GC造成的负担。</li>
+</ul>
+<h3 id="2-4-BytesQueue内存"><a href="#2-4-BytesQueue内存" class="headerlink" title="2.4 BytesQueue内存"></a>2.4 BytesQueue内存</h3><p>BigCache中的每一个shard都采用类似RingBuffer的结构</p>
+<ul>
+<li>对于map中每个元素而言，key存储的是 cache key的hash值，value存储的是实际值在byte数组中的位置。</li>
+<li>数据存储完全采用FIFO的形式，所有数据的新增、包括老数据的修改，都是直接追加到数组的后面，然后修改map的位置值即可。<br><img src="/img/BigCache%E8%A7%A3%E6%9E%90/2.png" srcset="/img/loading.gif" lazyload></li>
+</ul>
+<p>具体到每一个数据的存储，并不是完全只存储val值，会把一些相关的信息一起存储，构成数据header和body，，一个header和一个body构成一个完整的条目，其中：</p>
+<ul>
+<li>Block Size：标记header和Body，也就是Entry的总长度</li>
+<li>header：包括 插入时间戳，key的hash值，key的长度， header的长度固定</li>
+<li>body：key的原始值，value的原始值</li>
+<li>有了BlockSize、Header Length以及Key的长度，就可以确定value的边界并正常进行数据读取了。<br><img src="/img/BigCache%E8%A7%A3%E6%9E%90/3.png" srcset="/img/loading.gif" lazyload></li>
+</ul>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-keyword">const</span> (<br>	<span class="hljs-comment">// header中的时间戳、hash值和key长度占用字节数固定，可以方便找到key原始值的起始位置</span><br>	timestampSizeInBytes = <span class="hljs-number">8</span>       <span class="hljs-comment">// Number of bytes used for timestamp</span><br>	hashSizeInBytes      = <span class="hljs-number">8</span>       <span class="hljs-comment">// Number of bytes used for hash</span><br>	keySizeInBytes       = <span class="hljs-number">2</span>       <span class="hljs-comment">// Number of bytes used for size of entry key</span><br>	headersSizeInBytes   = timestampSizeInBytes + hashSizeInBytes + keySizeInBytes <span class="hljs-comment">// Number of bytes used for all headers</span><br>)<br><br><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-title">wrapEntry</span><span class="hljs-params">(timestamp <span class="hljs-type">uint64</span>, hash <span class="hljs-type">uint64</span>, key <span class="hljs-type">string</span>, entry []<span class="hljs-type">byte</span>, buffer *[]<span class="hljs-type">byte</span>)</span></span> []<span class="hljs-type">byte</span> &#123;<br>	keyLength := <span class="hljs-built_in">len</span>(key)<br>	blobLength := <span class="hljs-built_in">len</span>(entry) + headersSizeInBytes + keyLength<br><br>	<span class="hljs-keyword">if</span> blobLength &gt; <span class="hljs-built_in">len</span>(*buffer) &#123;<br>		*buffer = <span class="hljs-built_in">make</span>([]<span class="hljs-type">byte</span>, blobLength)<br>	&#125;<br>	blob := *buffer<br>	<br>	<span class="hljs-comment">// 按照小端序的方式，顺序写入时间戳、key的hash值、key的长度、key的实际值以及value的实际值</span><br>	binary.LittleEndian.PutUint64(blob, timestamp)<br>	binary.LittleEndian.PutUint64(blob[timestampSizeInBytes:], hash)<br>	binary.LittleEndian.PutUint16(blob[timestampSizeInBytes+hashSizeInBytes:], <span class="hljs-type">uint16</span>(keyLength))<br>	<span class="hljs-built_in">copy</span>(blob[headersSizeInBytes:], key)<br>	<span class="hljs-built_in">copy</span>(blob[headersSizeInBytes+keyLength:], entry)<br><br>	<span class="hljs-keyword">return</span> blob[:blobLength]<br>&#125;<br></code></pre></td></tr></table></figure>
+<ul>
+<li>RingBuffer满时，bigCache如何处理？<ul>
+<li>如果entries queue.BytesQueue 未达到设定的HardMaxCacheSize（最大内存上限），或者无HardMaxCacheSize要求，则直接扩容queue.BytesQueue 直到达到上限。不过扩容的时候，是创建了一个新的空[]byte数组，把原有数据copy过去。</li>
+<li>如果内存已达上限，无法继续扩容，则会尝试删除最旧数据（无论是否过期），直至可以将数据放到BytesQueue中。如果这个时候新数据非常大，可能会为此淘汰掉许多旧数据。</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-5-锁冲突"><a href="#2-5-锁冲突" class="headerlink" title="2.5 锁冲突"></a>2.5 锁冲突</h3><p>BigCache使用Key的hash值查找数据，不可避免的会导致hash冲突问题。锁冲突在写入和读取的过程中都有可能发生。下面分别分析Set和Get的过程，顺便看看锁冲突是如何解决的。</p>
+<ul>
+<li>Set流程<ul>
+<li>计算key的hash值，得到对应的shard</li>
+<li>将key和value等信息序列化成指定格式的[]byte, push到BytesQueue中。</li>
+<li>根据BytesQueue返回的偏移量(也就是数组下标)，将key(hash值)和value(数组下标)设置hashmap中。<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(s *cacheShard)</span></span> set(key <span class="hljs-type">string</span>, hashedKey <span class="hljs-type">uint64</span>, entry []<span class="hljs-type">byte</span>) <span class="hljs-type">error</span> &#123;<br>	currentTimestamp := <span class="hljs-type">uint64</span>(s.clock.epoch())<br><br>	s.lock.Lock()<br>	<span class="hljs-comment">// 从这里可以看到，如果发现存在已有的hashKey（可能是冲突，也可能是本来就存在），bigcache并不会做特殊处理，而是直接将原本的位置reset，并将新的值push到最后，然后替换这个key的下标</span><br>	<span class="hljs-keyword">if</span> previousIndex := s.hashmap[hashedKey]; previousIndex != <span class="hljs-number">0</span> &#123;<br>		<span class="hljs-keyword">if</span> previousEntry, err := s.entries.Get(<span class="hljs-type">int</span>(previousIndex)); err == <span class="hljs-literal">nil</span> &#123;<br>			<span class="hljs-comment">// resetKeyFromEntry 会将条目中key的hash值置零</span><br>			resetKeyFromEntry(previousEntry)<br>		&#125;<br>	&#125;<br><br>	<span class="hljs-keyword">if</span> oldestEntry, err := s.entries.Peek(); err == <span class="hljs-literal">nil</span> &#123;<br>		s.onEvict(oldestEntry, currentTimestamp, s.removeOldestEntry)<br>	&#125;<br>	<br>	<span class="hljs-comment">// 构建一个数据条目</span><br>	w := wrapEntry(currentTimestamp, hashedKey, key, entry, &amp;s.entryBuffer)<br><br>	<span class="hljs-keyword">for</span> &#123;<br>		<span class="hljs-comment">// 将数据条目push到最后，并修改hashmap的值，就完成了增加或者更新</span><br>		<span class="hljs-keyword">if</span> index, err := s.entries.Push(w); err == <span class="hljs-literal">nil</span> &#123;<br>			s.hashmap[hashedKey] = <span class="hljs-type">uint32</span>(index)<br>			s.lock.Unlock()<br>			<span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span><br>		&#125;<br>		<span class="hljs-keyword">if</span> s.removeOldestEntry(NoSpace) != <span class="hljs-literal">nil</span> &#123;<br>			s.lock.Unlock()<br>			<span class="hljs-keyword">return</span> fmt.Errorf(<span class="hljs-string">&quot;entry is bigger than max shard size&quot;</span>)<br>		&#125;<br>	&#125;<br>&#125;<br></code></pre></td></tr></table></figure></li>
+</ul>
+</li>
+<li>Get流程<ul>
+<li>读数据，hash冲突时直接返回数据不存在，可能这也是存储key实际值的意义所在。<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(s *cacheShard)</span></span> get(key <span class="hljs-type">string</span>, hashedKey <span class="hljs-type">uint64</span>) ([]<span class="hljs-type">byte</span>, <span class="hljs-type">error</span>) &#123;<br>	s.lock.RLock()<br>	itemIndex := s.hashmap[hashedKey]<br><br>	<span class="hljs-comment">// bigcache 中， ringbuffer 的第 0 位并不用来存放任何数据，</span><br>	<span class="hljs-comment">// 如果发现 分片 map 中得到数据的 index 为 0，就可以直接认为没有对应的缓存数据</span><br>	<span class="hljs-keyword">if</span> itemIndex == <span class="hljs-number">0</span> &#123;<br>		s.lock.RUnlock()<br>		s.miss()<br>		<span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, ErrEntryNotFound<br>	&#125;<br>	<br>	<span class="hljs-comment">// 从ringbuff中获取到指定key的条目数据</span><br>	wrappedEntry, err := s.entries.Get(<span class="hljs-type">int</span>(itemIndex))<br>	<span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> &#123;<br>		s.lock.RUnlock()<br>		s.miss()<br>		<span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, err<br>	&#125;<br>	<span class="hljs-comment">// 从数据中解析出实际存储的key</span><br>	<span class="hljs-comment">// 如果实际存储的key跟查询的key不一致，说明产生了hash冲突，直接返回空</span><br>	<span class="hljs-keyword">if</span> entryKey := readKeyFromEntry(wrappedEntry); key != entryKey &#123;<br>		<span class="hljs-keyword">if</span> s.isVerbose &#123;<br>			s.logger.Printf(<span class="hljs-string">&quot;Collision detected. Both %q and %q have the same hash %x&quot;</span>, key, entryKey, hashedKey)<br>		&#125;<br>		s.lock.RUnlock()<br>		s.collision()<br>		<span class="hljs-keyword">return</span> <span class="hljs-literal">nil</span>, ErrEntryNotFound<br>	&#125;<br>	entry := readEntry(wrappedEntry)<br>	s.lock.RUnlock()<br>	s.hit()<br>	<span class="hljs-keyword">return</span> entry, <span class="hljs-literal">nil</span><br>&#125;<br></code></pre></td></tr></table></figure></li>
+</ul>
+</li>
+</ul>
+<h3 id="2-6-数据删除"><a href="#2-6-数据删除" class="headerlink" title="2.6 数据删除"></a>2.6 数据删除</h3><p>BigCache的删除比较简单，本质上只是将key从map中删除，并没有实际删除BytesQueue中的数据，核心逻辑只有两行。实际值的删除会等到数据清理或者Buffer满的时候淘汰掉。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs go">...<br><span class="hljs-comment">// 从hashmap中删除key，使数据不可读</span><br><span class="hljs-built_in">delete</span>(s.hashmap, hashedKey)<br>...<br><span class="hljs-comment">// 将entry条目的key的hash值置零</span><br>resetHashFromEntry(wrappedEntry)<br>...<br></code></pre></td></tr></table></figure>
+<h3 id="2-7-过期淘汰"><a href="#2-7-过期淘汰" class="headerlink" title="2.7 过期淘汰"></a>2.7 过期淘汰</h3><p>BigCache中的数据在删除数据或者Set数据时，如果碰到就值，只是删除或者修改hashmap中的值，并不会实际删除数据。实际的数据删除发生在过期淘汰时。</p>
+<p>📌 <font color="red">BigCache没有开放单个元素的可过期时间，所有元素的cache时长都是一样的，这就意味着所有元素的过期时间在队列中天然有序。</font>    </p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs go"><span class="hljs-function"><span class="hljs-keyword">func</span> <span class="hljs-params">(s *cacheShard)</span></span> cleanUp(currentTimestamp <span class="hljs-type">uint64</span>) &#123;<br>	s.lock.Lock()<br>	<span class="hljs-keyword">for</span> &#123;<br>		<span class="hljs-comment">// 只要存在元素，就逐个便利</span><br>		<span class="hljs-keyword">if</span> oldestEntry, err := s.entries.Peek(); err != <span class="hljs-literal">nil</span> &#123;<br>			<span class="hljs-keyword">break</span><br>		<span class="hljs-comment">// 直至某个元素不过期为止</span><br>		&#125; <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> evicted := s.onEvict(oldestEntry, currentTimestamp, s.removeOldestEntry); !evicted &#123;<br>			<span class="hljs-keyword">break</span><br>		&#125;<br>	&#125;<br>	s.lock.Unlock()<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h2 id="3-注意事项"><a href="#3-注意事项" class="headerlink" title="3. 注意事项"></a>3. 注意事项</h2><h3 id="3-1-数据过期处理"><a href="#3-1-数据过期处理" class="headerlink" title="3.1 数据过期处理"></a>3.1 数据过期处理</h3><p>在bigcache中，LifeWindow和CleanWindow是两个用于缓存管理的重要参数，但它们有不同的作用。</p>
+<ul>
+<li>LifeWindow 是缓存条目的生存时间，决定了条目在多长时间内会被视为过期。</li>
+<li>CleanWindow 是清理过程的时间间隔，决定了过期条目实际被清除的频率。</li>
+</ul>
+<p>这种机制使得bigcache在设计上允许读取过期数据。它不会主动阻止访问已经过期的缓存条目，除非这些条目在CleanWindow期间被清理掉。</p>
+<p>bigcache的这种设计是为了优化性能，因为在每次访问缓存时都检查条目是否过期会带来额外的性能开销。通过异步清理过期条目，bigcache能够在不影响访问速度的情况下提供缓存功能。</p>
+<p>如果对数据的时效性要求很高，需要手动在读取后检查数据是否过期，代码示例如下：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs go">item, err := cache.Get(<span class="hljs-string">&quot;myKey&quot;</span>)<br><span class="hljs-keyword">if</span> err != <span class="hljs-literal">nil</span> &#123;<br>    <span class="hljs-comment">// Handle the error</span><br>&#125;<br><br>timestamp := extractTimestamp(item) <span class="hljs-comment">// 解析数据中的时间戳</span><br><span class="hljs-keyword">if</span> time.Since(timestamp) &gt; cacheLifeWindow &#123;<br>    <span class="hljs-comment">// Data is considered stale</span><br>    <span class="hljs-comment">// Handle the stale data case</span><br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h2 id="4-参考文献"><a href="#4-参考文献" class="headerlink" title="4. 参考文献"></a>4. 参考文献</h2><p><a target="_blank" rel="noopener" href="https://juejin.cn/post/7107635176263385118">https://juejin.cn/post/7107635176263385118</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.cyhone.com/articles/bigcache/">https://www.cyhone.com/articles/bigcache/</a> </p>
+<p><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/e-ku-fLsLk0Ok2eTkdx6Dw">https://mp.weixin.qq.com/s/e-ku-fLsLk0Ok2eTkdx6Dw</a></p>
+<p><a target="_blank" rel="noopener" href="https://juejin.cn/post/7258840980428750885">https://juejin.cn/post/7258840980428750885</a></p>
+<p><a target="_blank" rel="noopener" href="https://xiaorui.cc/archives/7385">https://xiaorui.cc/archives/7385</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1/" class="category-chain-item">系统设计</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/BigCache/" class="print-no-link">#BigCache</a>
+      
+        <a href="/tags/%E6%9C%AC%E5%9C%B0%E7%BC%93%E5%AD%98/" class="print-no-link">#本地缓存</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>BigCache解析</div>
+      <div>https://wujiyang.github.io/2024/08/10/BigCache解析/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>wujiyang</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2024年8月10日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2024/08/03/%E5%B8%83%E9%9A%86%E8%BF%87%E6%BB%A4%E5%99%A8/" title="布隆过滤器">
+                        <span class="hidden-mobile">布隆过滤器</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="busuanzi_container_site_pv" style="display: none">
+        总访问量 
+        <span id="busuanzi_value_site_pv"></span>
+         次
+      </span>
+    
+    
+      <span id="busuanzi_container_site_uv" style="display: none">
+        总访客数 
+        <span id="busuanzi_value_site_uv"></span>
+         人
+      </span>
+    
+    
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
