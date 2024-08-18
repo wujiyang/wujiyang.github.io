@@ -25,7 +25,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://wujiyang.github.io/img/Golang-Empty-Nil-Slice/0.png">
 <meta property="article:published_time" content="2024-04-10T13:17:53.000Z">
-<meta property="article:modified_time" content="2024-04-10T14:12:01.685Z">
+<meta property="article:modified_time" content="2024-08-18T10:26:56.441Z">
 <meta property="article:author" content="wujiyang">
 <meta property="article:tag" content="Golang">
 <meta property="article:tag" content="Slice">
@@ -311,17 +311,10 @@
 <p>其中len和cap分别是切片的长度和容量，而ptr则是指向底层数组的指针。    </p>
 <p>所谓nil切片，就是ptr指向的指针也为nil<br><img src="/img/Golang-Empty-Nil-Slice/1.jpg" srcset="/img/loading.gif" lazyload>     </p>
 <p>可以通过一个小实验验证指针的数据：  </p>
-<pre><code class="golang">var s1 []int  
-s2 := []int&#123;&#125;  
-s3 := make([]int, 0)
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs golang"><span class="hljs-keyword">var</span> s1 []<span class="hljs-type">int</span>  <br>s2 := []<span class="hljs-type">int</span>&#123;&#125;  <br>s3 := <span class="hljs-built_in">make</span>([]<span class="hljs-type">int</span>, <span class="hljs-number">0</span>)<br><br>fmt.Printf(<span class="hljs-string">&quot;s1 (addr: %p): %+8v\n&quot;</span>, &amp;s1, *(*reflect.SliceHeader)(unsafe.Pointer(&amp;s1)))<br>fmt.Printf(<span class="hljs-string">&quot;s2 (addr: %p): %+8v\n&quot;</span>, &amp;s2, *(*reflect.SliceHeader)(unsafe.Pointer(&amp;s2))) <br>fmt.Printf(<span class="hljs-string">&quot;s3 (addr: %p): %+8v\n&quot;</span>, &amp;s3, *(*reflect.SliceHeader)(unsafe.Pointer(&amp;s3))) <br><span class="hljs-comment">// s1 (addr: 0xc0000080d8): &#123;Data:       0 Len:       0 Cap:       0&#125;</span><br><span class="hljs-comment">// s2 (addr: 0xc0000080f0): &#123;Data:12760120 Len:       0 Cap:       0&#125;</span><br><span class="hljs-comment">// s3 (addr: 0xc000008108): &#123;Data:12760120 Len:       0 Cap:       0&#125;</span><br><br></code></pre></td></tr></table></figure>
 
-fmt.Printf(&quot;s1 (addr: %p): %+8v\n&quot;, &amp;s1, *(*reflect.SliceHeader)(unsafe.Pointer(&amp;s1)))
-fmt.Printf(&quot;s2 (addr: %p): %+8v\n&quot;, &amp;s2, *(*reflect.SliceHeader)(unsafe.Pointer(&amp;s2))) 
-fmt.Printf(&quot;s3 (addr: %p): %+8v\n&quot;, &amp;s3, *(*reflect.SliceHeader)(unsafe.Pointer(&amp;s3))) 
-// s1 (addr: 0xc0000080d8): &#123;Data:       0 Len:       0 Cap:       0&#125;
-// s2 (addr: 0xc0000080f0): &#123;Data:12760120 Len:       0 Cap:       0&#125;
-// s3 (addr: 0xc000008108): &#123;Data:12760120 Len:       0 Cap:       0&#125;
-</code></pre>
+
+
 
                 
               </div>
