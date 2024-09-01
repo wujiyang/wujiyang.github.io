@@ -60,7 +60,7 @@
   <script id="fluid-configs">
     var Fluid = window.Fluid || {};
     Fluid.ctx = Object.assign({}, Fluid.ctx)
-    var CONFIG = {"hostname":"wujiyang.github.io","root":"/","version":"1.9.7","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml","include_content_in_search":true};
+    var CONFIG = {"hostname":"wujiyang.github.io","root":"/","version":"1.9.7","typing":{"enable":true,"typeSpeed":60,"cursorChar":"","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":4},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml","include_content_in_search":true};
 
     if (CONFIG.web_analytics.follow_dnt) {
       var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
@@ -226,10 +226,10 @@
     
     
     <div class="category row nomargin-x">
-      <a class="category-item collapsed
+      <a class="category-item 
           list-group-item category-item-action col-10 col-md-11 col-xm-11" title="Golang"
         id="heading-eda14e187a768b38eda999457c9cca1e" role="tab" data-toggle="collapse" href="#collapse-eda14e187a768b38eda999457c9cca1e"
-        aria-expanded="false"
+        aria-expanded="true"
       >
         Golang
         <span class="list-group-count"></span>
@@ -241,22 +241,14 @@
           <span>6</span>
         </a>
       
-      <div class="category-collapse collapse " id="collapse-eda14e187a768b38eda999457c9cca1e"
+      <div class="category-collapse collapse show" id="collapse-eda14e187a768b38eda999457c9cca1e"
            role="tabpanel" aria-labelledby="heading-eda14e187a768b38eda999457c9cca1e">
         
         
           
+          
   <div class="category-post-list">
     
-    
-      
-      
-        <a href="/2024/08/31/Golang-Context%E8%A7%A3%E6%9E%90/" title="Golang Context 解析"
-           class="list-group-item list-group-item-action
-           ">
-          <span class="category-post">Golang Context 解析</span>
-        </a>
-      
     
       
       
@@ -305,6 +297,50 @@
     
   </div>
 
+          
+  
+    
+    
+    
+    <div class="category-sub row nomargin-x">
+      <a class="category-subitem collapsed
+          list-group-item category-item-action col-10 col-md-11 col-xm-11" title="并发编程"
+        id="heading-1a9a671bb1da8c030da96f67497751c7" role="tab" data-toggle="collapse" href="#collapse-1a9a671bb1da8c030da96f67497751c7"
+        aria-expanded="false"
+      >
+        并发编程
+        <span class="list-group-count"></span>
+        <i class="iconfont icon-arrowright"></i>
+      </a>
+      
+        <a href="/categories/Golang/%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/" class="category-count col-2 col-md-1 col-xm-1">
+          <i class="iconfont icon-articles"></i>
+          <span>1</span>
+        </a>
+      
+      <div class="category-collapse collapse " id="collapse-1a9a671bb1da8c030da96f67497751c7"
+           role="tabpanel" aria-labelledby="heading-1a9a671bb1da8c030da96f67497751c7">
+        
+        
+          
+  <div class="category-post-list">
+    
+    
+      
+      
+        <a href="/2024/08/31/Golang-Context%E8%A7%A3%E6%9E%90/" title="Golang Context 解析"
+           class="list-group-item list-group-item-action
+           ">
+          <span class="category-post">Golang Context 解析</span>
+        </a>
+      
+    
+  </div>
+
+        
+      </div>
+    </div>
+  
         
       </div>
     </div>
