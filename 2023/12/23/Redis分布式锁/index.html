@@ -236,6 +236,14 @@
 
     
     
+      
+        <span id="busuanzi_container_page_pv" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="busuanzi_value_page_pv"></span> 次
+        </span>
+        
+      
+    
   </div>
 
 
@@ -657,7 +665,7 @@ This object is deprecated. Use RLock or RFencedLock instead.
       linkClass       : 'tocbot-link',
       activeLinkClass : 'tocbot-active-link',
       listClass       : 'tocbot-list',
-      isCollapsedClass: 'tocbot-is-collapsed',
+      isCollapsedClass: true,
       collapsibleClass: 'tocbot-is-collapsible',
       scrollSmooth    : true,
       includeTitleTags: true,
@@ -666,7 +674,7 @@ This object is deprecated. Use RLock or RFencedLock instead.
     if (toc.find('.toc-list-item').length > 0) {
       toc.css('visibility', 'visible');
     }
-
+    
     Fluid.events.registerRefreshCallback(function() {
       if ('tocbot' in window) {
         tocbot.refresh();
